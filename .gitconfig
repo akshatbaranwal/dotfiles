@@ -1,0 +1,7 @@
+[user]
+	name = AkshatBaranwal
+	email = akshatbaranwal07@gmail.com
+[core]
+	editor = subl -n -w
+[alias]
+	co = checkout
