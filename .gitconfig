@@ -2,6 +2,6 @@
 	name = AkshatBaranwal
 	email = akshatbaranwal07@gmail.com
 [core]
-	editor = subl -n -w
+	editor = vim
 [alias]
 	co = checkout
