@@ -1,10 +1,8 @@
 #!/bin/bash
 
-dotfiles=($(ls -adp .* | grep -v /))
-
-dir="/media/akshat/Data/Documents/MyCodes/dotfiles"
+dotfiles=($(ls -ad .* | grep -Ev '\.\B|.git$|.gitignore'))
 
 for df in "${dotfiles[@]}"; do
-	ln -nsf "${dir}/${df}" "${HOME}/${df}"
+	ln -nsf "${PWD}/${df}" "${HOME}/${df}"
 done
 
