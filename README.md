@@ -9,5 +9,5 @@ Better create a backup first :)
 ```
 git clone https://github.com/AkshatBaranwal/dotfiles.git
 cd dotfiles
-./dotfiles_setup.sh
+sh dotfiles_setup.sh
 ```
