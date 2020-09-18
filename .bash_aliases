@@ -1,4 +1,5 @@
 alias aliases='cd; vim +1 .bash_aliases; source .bash_aliases; sort .bash_aliases > .alias; cp .alias .bash_aliases; rm .alias; cd ~-'
+alias bashfn='vim ~/.bash_functions; source ~/.bash_functions'
 alias bashrc='vim ~/.bashrc; source ~/.bashrc'
 alias byee='shutdown -P now'
 alias bye='read -p "Shutdown After : " x;shutdown -P +$x'
