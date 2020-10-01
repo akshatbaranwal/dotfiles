@@ -65,7 +65,7 @@ function g+ (){
 # quick C compile and run
 function g() {
 	rm temporaryCode 2>/dev/null
-	if [ ${1#*.} == "cpp" ] || grep 'bits/stdc++.h' $1 >/dev/null; then
+	if [ ${1#*.} == "cpp" ] || grep 'bits/stdc++.h' -- $1 >/dev/null; then
 		g++ -o temporaryCode $1
 	elif grep -E 'pthread.h|semaphore.h' -- $1 >/dev/null; then
 		gcc -pthread -o temporaryCode $1
