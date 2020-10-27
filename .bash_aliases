@@ -36,7 +36,6 @@ alias sdiff="sdiff -w \'tput cols\'"
 alias search='sudo find ./* -iname'
 alias sl='sl -e'
 alias stalk='py /media/akshat/Data/Documents/MyCodes/Python/stalk.py'
-alias turbo='echo $((1-$(cat /sys/devices/system/cpu/intel_pstate/no_turbo))) | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo >/dev/null'
 alias update='sapt update;sapt full-upgrade;sapt autoremove'
 alias updatetime='timedatectl set-local-rtc 1; sudo ntpdate ntp.ubuntu.com; timedatectl set-local-rtc 0'
 alias uphone='sudo umount /media/akshat/Phone'

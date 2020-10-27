@@ -79,11 +79,25 @@ function g() {
 # quick java compile and run
 function jv() {
 	if [ ${1#*.} == "java" ]; then
-		javac $1 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
+		javac -verbose $1 2> >(grep wrote) | grep -v '\$' | awk {'print substr($2,0,length($2)-1)'}
+		#javac $1 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
+	elif [ ${1#*.} == "class" ]; then
+		java ${1%.*} ${@:2} 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
 	else
-		java $1 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
+		java $1 ${@:2} 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
 	fi
 }
+
+# toggle turbo boost
+function turbo() {
+	echo $((1-$(cat /sys/devices/system/cpu/intel_pstate/no_turbo))) | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo >/dev/null
+	if [ $(cat /sys/devices/system/cpu/intel_pstate/no_turbo) -eq 1 ]; then
+		echo Turbo Boost OFF
+	else
+		echo Turbo Boost ON
+	fi
+}
+
 
 # function Extract for common file formats
 function extract {
