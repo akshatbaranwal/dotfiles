@@ -19,7 +19,7 @@ function stopwatch(){
 # productivity hack
 function timer() {
 	Xaxis=$(xrandr --current | grep '*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
-	terminator --geometry=280x1+$(($Xaxis/2-140))+0 -p "timer" -x bash .bash_functions countdown $1 $2 $3 2>/dev/null & exit
+	terminator --geometry=280x1+$(($Xaxis/2-140))+0 -p "timer" -x bash ~/.bash_functions countdown $1 $2 $3 2>/dev/null & exit
 }
 
 #convert topcoder test case format
