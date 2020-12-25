@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function countdown(){
 	date1=$((`date +%s` + $1 + 60*${2:-0} + 3600*${3:-0})); 
 	while [ "$date1" -ge `date +%s` ]; do 
@@ -48,10 +50,8 @@ function deb(){
 	for var in "$@"
 	do
 		sudo dpkg -i $var
-		if [ $? -gt 0 ]; then
-			sudo apt install -f
-		fi
 	done
+	sudo apt install -f
 }
 
 # quick C++ compile and run
@@ -60,6 +60,7 @@ function g+ (){
 	g++ -o temporaryCode $1
 	./temporaryCode ${@:2}
 	rm temporaryCode 2>/dev/null
+	echo
 }
 
 # quick C compile and run
@@ -74,6 +75,7 @@ function g() {
 	fi
 	./temporaryCode ${@:2}
 	rm temporaryCode 2>/dev/null
+	echo
 }
 
 # quick java compile and run
@@ -86,6 +88,7 @@ function jv() {
 	else
 		java $1 ${@:2} 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
 	fi
+	echo
 }
 
 # toggle turbo boost
