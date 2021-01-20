@@ -71,6 +71,8 @@ g() {
 		g++ -o temporaryCode $1
 	elif grep -E 'pthread.h|semaphore.h' -- $1 >/dev/null; then
 		gcc -pthread -o temporaryCode $1
+	elif grep -E 'math.h' -- $1 >/dev/null; then
+		gcc -lm -o temporaryCode $1
 	else
 		gcc -o temporaryCode $1
 	fi
@@ -171,8 +173,15 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-			}' | tr '[:lower:]' '[:upper:]') | tail -n1 | awk '{print $2}' | xargs firefox-esr
+				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send -t 3000" "cut -f2 -d' ' | xargs firefox-esr" & exit
 	fi
+}
+
+sql() {
+	if ! systemctl --no-pager status mariadb >/dev/null; then
+		systemctl start mariadb
+	fi
+	mycli -u akshat -p a
 }
 
 # bubbyee

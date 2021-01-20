@@ -36,7 +36,6 @@ alias sapt='yes | sudo apt'
 alias sdiff="sdiff -w \'tput cols\'"
 alias search='sudo find ./* -iname'
 alias sl='sl -e'
-alias sql='mycli -u akshat -p a'
 alias stalk='py /media/akshat/Data/Documents/MyCodes/Python/stalk.py'
 alias udmy='opengedit & openchrome & opensubl & openvlc'
 alias update='sudo apt update -y && sudo apt full-upgrade -y && sudo apt autoremove -y && sudo apt clean -y && sudo apt autoclean -y'
