@@ -148,6 +148,9 @@ fi
 }
 
 # google classroom quick class join
+# put the following lines in crontab
+# 1 9,15 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
+# 11 11 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
 class() {
 	classDetails='
 
@@ -173,7 +176,7 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send -t 3000" "cut -f2 -d' ' | xargs firefox-esr" & exit
+				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send" "cut -f2 -d' ' | xargs firefox" & exit
 	fi
 }
 
@@ -182,6 +185,15 @@ sql() {
 		systemctl start mariadb
 	fi
 	mycli -u akshat -p a
+}
+
+# check if shutdown is scheduled
+shutdownCheck() {
+	if [ $(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000)) | cut -f4 -d' ') -ne 1970 ]; then
+		date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000))
+	else
+		echo "Nahh Chill"
+	fi
 }
 
 # bubbyee
