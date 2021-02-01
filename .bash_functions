@@ -45,14 +45,8 @@ tpc(){
 }
 
 # brightness hack
-b(){
-	eval $(xdotool getmouselocation --shell); 
-	xdotool mousemove 1900 20; 
-	xdotool click 1; 
-	xdotool mousemove $((1592+3*$1)) 153; 
-	xdotool click 1; 
-	xdotool mousemove $X $Y; 
-	xdotool click 1;
+b() {
+	echo $(($(cat /sys/class/backlight/intel_backlight/max_brightness)*$1/100)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
 }
 
 # install deb pkg with dependencies
@@ -176,7 +170,7 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send" "cut -f2 -d' ' | xargs firefox" & exit
+				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send" "cut -f2 -d' ' | xargs xdg-open" & exit
 	fi
 }
 
@@ -184,22 +178,28 @@ sql() {
 	if ! systemctl --no-pager status mariadb >/dev/null; then
 		systemctl start mariadb
 	fi
+	echo
 	mycli -u akshat -p a
 }
 
 # check if shutdown is scheduled
 shutdownCheck() {
-	if [ $(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000)) | cut -f4 -d' ') -ne 1970 ]; then
-		date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000))
+	k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000)))"
+	if [ $(echo $k | cut -f4 -d' ') -ne 1970 ]; then
+		echo $k
+		read -p "Want to Cancel? [Y/n] " k
+		echo ${k:=n} > /dev/null
+		if [ ${k:0:1} = 'y' ] || [ ${k:0:1} = 'Y' ]; then
+			shutdown -c
+		fi
 	else
-		echo "Nahh Chill"
+		echo "No Shutdown Scheduled"
 	fi
 }
 
 # bubbyee
 byee() {
 	shutdown -P +${1:-0}
-	countdown 0 $1	
 }
 
 "$@"
