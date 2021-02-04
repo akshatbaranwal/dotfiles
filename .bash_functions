@@ -46,7 +46,7 @@ tpc(){
 
 # brightness hack
 b() {
-	echo $(($(cat /sys/class/backlight/intel_backlight/max_brightness)*$1/100)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
+	echo $((685*$1/100)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
 }
 
 # install deb pkg with dependencies
@@ -90,12 +90,14 @@ jv() {
 
 # toggle turbo boost
 turbo() {
-	echo $((1-$(cat /sys/devices/system/cpu/intel_pstate/no_turbo))) | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo >/dev/null
-	if [ $(cat /sys/devices/system/cpu/intel_pstate/no_turbo) -eq 1 ]; then
+	cd /sys/devices/system/cpu/intel_pstate
+	echo $((1-$(cat no_turbo))) | sudo tee no_turbo >/dev/null
+	if [ $(cat no_turbo) -eq 1 ]; then
 		echo Turbo Boost OFF
 	else
 		echo Turbo Boost ON
 	fi
+	cd ~-
 }
 
 
@@ -145,6 +147,7 @@ fi
 # put the following lines in crontab
 # 1 9,15 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
 # 11 11 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
+# echo <password> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send
 class() {
 	classDetails='
 
@@ -170,7 +173,7 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send" "cut -f2 -d' ' | xargs xdg-open" & exit
+				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send --hint int:transient:1" "cut -f2 -d' ' | xargs xdg-open" & exit
 	fi
 }
 
@@ -200,6 +203,18 @@ shutdownCheck() {
 # bubbyee
 byee() {
 	shutdown -P +${1:-0}
+}
+
+# battery conservation mode toggle
+conservationMode () {
+	cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004\:00/
+    echo $((1-$(cat conservation_mode))) | sudo tee conservation_mode > /dev/null;
+    if [ $(cat conservation_mode) -eq 1 ]; then
+        echo Conservation Mode ON;
+    else
+        echo Conservation Mode OFF;
+    fi
+    cd ~-
 }
 
 "$@"
