@@ -46,7 +46,7 @@ tpc(){
 
 # brightness hack
 b() {
-	echo $((685*$1/100)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
+	echo $((685*$1)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
 }
 
 # install deb pkg with dependencies
@@ -215,6 +215,10 @@ conservationMode () {
         echo Conservation Mode OFF;
     fi
     cd ~-
+}
+
+search() {
+	find ./* -iregex ".*$1.*" | grep "$1"
 }
 
 "$@"

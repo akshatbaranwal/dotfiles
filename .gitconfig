@@ -3,5 +3,6 @@
 	email = akshatbaranwal07@gmail.com
 [core]
 	editor = vim
+	pager = less -+FX
 [alias]
 	co = checkout

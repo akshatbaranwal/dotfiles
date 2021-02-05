@@ -127,3 +127,9 @@ if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
 
+# shortcut for small brightness change
+# /bin/bash -c "echo <passwd> | sudo -S /home/akshat/.bash_functions b $(($(cat /sys/class/backlight/intel_backlight/brightness)/685+1)) 2>/dev/null"
+
+# snippet to run as button
+# echo <passwd> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send --hint int:transient:1
+
