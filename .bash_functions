@@ -46,7 +46,7 @@ tpc(){
 
 # brightness hack
 b() {
-	echo $((685*$1)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
+	echo $((685*$1+71)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
 }
 
 # install deb pkg with dependencies
@@ -147,7 +147,9 @@ fi
 # put the following lines in crontab
 # 1 9,15 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
 # 11 11 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
-# echo <password> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send
+
+# create gnome-extension with this command
+# echo <password> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null
 class() {
 	classDetails='
 
@@ -155,25 +157,26 @@ class() {
 Mon: DAA  PPL  DAA
 Tue: SOE  CN   PPL
 Wed: SOE  DBMS PPL
-Thu: CN   DBMS SOE
+Thu: CN   DBMS_TUT SOE
 Fri: DBMS CN   DAA
 
 PPL https://meet.google.com/lookup/ew55xe2fqk?authuser=1
 SOE https://meet.google.com/lookup/aifyofpkns?authuser=1
 CN https://meet.google.com/lookup/f76m7gdhyh?authuser=1
-DBMS https://meet.google.com/lookup/hwlsbmorxm?authuser=1
+DBMS https://iiita.webex.com/iiita/j.php?MTID=m9f1a2a578ec8cb0473c4bffcb24d07b8
+DBMS_TUT https://meet.google.com/lookup/hwlsbmorxm?authuser=1
 DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 
 	if [ $(date +%u) -gt 5 ]; then
-		echo "Enjoy Your Weekend!"
+		notify-send --hint int:transient:1 "Enjoy Your Weekend!"
 	elif [ $(date +%H) -gt 16 ] || [ $(date +%H) -lt 8 ]; then
-		echo "No More Classes Left!"
+		notify-send --hint int:transient:1 "No More Classes Left!"
 	else
-		echo "$classDetails" | grep $(echo "$classDetails" | awk -v row="$(($(date +%u)+3))" -v col="$(date +%H)" 'NR==row { 
+		echo "$classDetails" | grep -iw $(echo "$classDetails" | awk -v row="$(($(date +%u)+3))" -v col="$(date +%H)" 'NR==row { 
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-				}' | tr '[:lower:]' '[:upper:]') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send --hint int:transient:1" "cut -f2 -d' ' | xargs xdg-open" & exit
+				}') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send --hint int:transient:1" "cut -f2 -d' ' | xargs xdg-open" & exit
 	fi
 }
 
@@ -190,7 +193,7 @@ shutdownCheck() {
 	k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000)))"
 	if [ $(echo $k | cut -f4 -d' ') -ne 1970 ]; then
 		echo $k
-		read -p "Want to Cancel? [Y/n] " k
+		read -p "Want to Cancel? [N/y] " k
 		echo ${k:=n} > /dev/null
 		if [ ${k:0:1} = 'y' ] || [ ${k:0:1} = 'Y' ]; then
 			shutdown -c
@@ -217,8 +220,46 @@ conservationMode () {
     cd ~-
 }
 
-search() {
-	find ./* -iregex ".*$1.*" | grep "$1"
+# phone on pc
+cphone() {
+	if [ -z $1 ]; then
+		echo "Usage: cphone setup"
+		echo "       cphone display"
+	elif [ $1 = "setup" ]; then
+		if ! adb devices -l | grep "\busb\b" >/dev/null; then
+			notify-send --hint int:transient:1 "Waiting for USB" "Connect your device via USB";
+			echo "Waiting for USB..."
+		fi
+		while ! adb devices -l | grep "\busb\b" >/dev/null; do
+			sleep 1;
+		done;
+		adb kill-server;
+		adb start-server;
+		while ! adb devices -l | grep "\busb\b" >/dev/null; do
+			sleep 1;
+		done;
+		adb tcpip 5555;
+		while ! adb devices -l | grep "\busb\b" >/dev/null; do
+			sleep 1;
+		done;
+		adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555;
+		if adb devices | grep 5555 >/dev/null; then
+			notify-send --hint int:transient:1 "Success!" "You may disconnect USB now";
+		else
+			notify-send --hint int:transient:1 "Failed" "Connect to same network and try again";
+		fi
+	elif [ $1 = "display" ]; then
+		if [ $(adb devices | grep -v offline | wc -l) -eq 2 ]; then
+			/bin/bash /home/$(whoami)/.bash_functions cphone setup;
+		elif [ $(adb devices | grep -v offline | wc -l) -eq 3 ] && adb devices -l | grep "\busb\b" >/dev/null; then
+			/bin/bash /home/$(whoami)/.bash_functions cphone setup;
+		fi
+		scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | grep -v offline | head -n2 | tail -n1 | awk '{print $1}');
+	else
+		echo "Usage: cphone setup"
+		echo "       cphone display"
+	fi
+	# exit
 }
 
 "$@"

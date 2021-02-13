@@ -112,6 +112,7 @@ fi
 # PS1='\e[1;32m[\W]> \e[m'
 export PATH="/home/akshat/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin"
 export PYTHONSTARTUP=~/.pyrc
+export BAT_PAGER="less -RF"
 
 # Git configuration
 # Branch name in prompt
@@ -120,6 +121,7 @@ PS1='\e[1;32m[\W\e[m\e[0;32m$(__git_ps1 " (%s)")\e[m\e[1;32m]> \e[m'
 export PROMPT_COMMAND='echo -ne "\033]0;${PWD/#$HOME/~}\007"'
 # Tab completion for branch names
 source ~/.git-completion.bash
+source ~/.tldr-completion.bash
 
 # some miscellaneous functions
 
