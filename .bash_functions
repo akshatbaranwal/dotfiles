@@ -221,45 +221,38 @@ conservationMode () {
 }
 
 # phone on pc
-cphone() {
-	if [ -z $1 ]; then
-		echo "Usage: cphone setup"
-		echo "       cphone display"
-	elif [ $1 = "setup" ]; then
+dphone() {
+	waitForUSB() {
+		while ! adb devices -l | grep "\busb\b" >/dev/null; do
+			sleep 1;
+		done;
+	}
+	if [ $(adb devices | wc -l) -eq 2 ] || ([ $(adb devices | wc -l) -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || ! ping -c 1 $(adb devices | head -n2 | tail -n1 | awk '{print $1}' | cut -f1 -d:) >/dev/null)); then
 		if ! adb devices -l | grep "\busb\b" >/dev/null; then
-			notify-send --hint int:transient:1 "Waiting for USB" "Connect your device via USB";
-			echo "Waiting for USB..."
+			echo "Waiting for USB connection...";
 		fi
-		while ! adb devices -l | grep "\busb\b" >/dev/null; do
-			sleep 1;
-		done;
+		waitForUSB;
 		adb kill-server;
-		adb start-server;
-		while ! adb devices -l | grep "\busb\b" >/dev/null; do
-			sleep 1;
-		done;
-		adb tcpip 5555;
-		while ! adb devices -l | grep "\busb\b" >/dev/null; do
-			sleep 1;
-		done;
-		adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555;
-		if adb devices | grep 5555 >/dev/null; then
-			notify-send --hint int:transient:1 "Success!" "You may disconnect USB now";
+		adb start-server 2>/dev/null;
+		waitForUSB;
+		if [ -z "$(hostname -I)" ]; then
+			echo "Wifi Not Connected";
 		else
-			notify-send --hint int:transient:1 "Failed" "Connect to same network and try again";
+			if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ]; then
+				adb tcpip 5555 >/dev/null;
+				waitForUSB;
+				adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
+				if adb devices | grep 5555 >/dev/null; then
+					echo "You may disconnect USB now";
+				else
+					/bin/bash /home/$(whoami)/.bash_functions dphone setup;
+				fi
+			else
+				echo "Phone not on the same network";
+			fi
 		fi
-	elif [ $1 = "display" ]; then
-		if [ $(adb devices | grep -v offline | wc -l) -eq 2 ]; then
-			/bin/bash /home/$(whoami)/.bash_functions cphone setup;
-		elif [ $(adb devices | grep -v offline | wc -l) -eq 3 ] && adb devices -l | grep "\busb\b" >/dev/null; then
-			/bin/bash /home/$(whoami)/.bash_functions cphone setup;
-		fi
-		scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | grep -v offline | head -n2 | tail -n1 | awk '{print $1}');
-	else
-		echo "Usage: cphone setup"
-		echo "       cphone display"
 	fi
-	# exit
+	(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
 }
 
 "$@"
