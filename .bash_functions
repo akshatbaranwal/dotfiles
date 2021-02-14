@@ -51,8 +51,8 @@ b() {
 
 # install deb pkg with dependencies
 deb(){
-	for var in "$@"
-	do
+	ls -c | grep .*\.deb$;
+	for var in "$@"; do
 		sudo dpkg -i $var
 	done
 	sudo apt install -f
@@ -66,7 +66,7 @@ g() {
 	elif grep -E 'pthread.h|semaphore.h' -- $1 >/dev/null; then
 		gcc -pthread -o temporaryCode $1
 	elif grep -E 'math.h' -- $1 >/dev/null; then
-		gcc -lm -o temporaryCode $1
+		gcc -o temporaryCode $1 -lm
 	else
 		gcc -o temporaryCode $1
 	fi
@@ -103,11 +103,13 @@ turbo() {
 
 # function Extract for common file formats
 extract() {
- if [ -z "$1" ]; then
+  SAVEIFS=$IFS
+  IFS="$(printf '\n\t')"
+  if [ -z "$1" ]; then
     # display usage if no parameters given
     echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
     echo "       extract <path/file_name_1.ext> [path/file_name_2.ext] [path/file_name_3.ext]"
- else
+  else
     for n in "$@"
     do
       if [ -f "$n" ] ; then
@@ -116,18 +118,18 @@ extract() {
                          tar xvf "$n"       ;;
             *.lzma)      unlzma ./"$n"      ;;
             *.bz2)       bunzip2 ./"$n"     ;;
-            *.cbr|*.rar)       unrar x -ad ./"$n" ;;
+            *.cbr|*.rar) unrar x -ad ./"$n" ;;
             *.gz)        gunzip ./"$n"      ;;
-            *.cbz|*.epub|*.zip)       unzip ./"$n"       ;;
+            *.cbz|*.epub|*.zip) unzip ./"$n";;
             *.z)         uncompress ./"$n"  ;;
             *.7z|*.apk|*.arj|*.cab|*.cb7|*.chm|*.deb|*.dmg|*.iso|*.lzh|*.msi|*.pkg|*.rpm|*.udf|*.wim|*.xar)
                          7z x ./"$n"        ;;
             *.xz)        unxz ./"$n"        ;;
             *.exe)       cabextract ./"$n"  ;;
             *.cpio)      cpio -id < ./"$n"  ;;
-            *.cba|*.ace)      unace x ./"$n"      ;;
+            *.cba|*.ace) unace x ./"$n"     ;;
             *.zpaq)      zpaq x ./"$n"      ;;
-            *.arc)         arc e ./"$n"       ;;
+            *.arc)       arc e ./"$n"       ;;
             *.cso)       ciso 0 ./"$n" ./"$n.iso" && \
                               extract $n.iso && \rm -f $n ;;
             *)
@@ -140,7 +142,8 @@ extract() {
           return 1
       fi
     done
-fi
+  fi
+  IFS=$SAVEIFS
 }
 
 # google classroom quick class join
@@ -221,38 +224,57 @@ conservationMode () {
 }
 
 # phone on pc
+
+# use this to create a shortcut
+# gnome-terminal -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 1 tail -f $HOME/nohup.out; done"
+
 dphone() {
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
 			sleep 1;
 		done;
 	}
+	export -f waitForUSB;
+	if ! ps x | grep -v grep | grep adb >/dev/null; then
+		adb start-server 2>/dev/null
+	fi
 	if [ $(adb devices | wc -l) -eq 2 ] || ([ $(adb devices | wc -l) -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || ! ping -c 1 $(adb devices | head -n2 | tail -n1 | awk '{print $1}' | cut -f1 -d:) >/dev/null)); then
 		if ! adb devices -l | grep "\busb\b" >/dev/null; then
 			echo "Waiting for USB connection...";
 		fi
-		waitForUSB;
-		adb kill-server;
-		adb start-server 2>/dev/null;
-		waitForUSB;
-		if [ -z "$(hostname -I)" ]; then
-			echo "Wifi Not Connected";
-		else
-			if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ]; then
-				adb tcpip 5555 >/dev/null;
-				waitForUSB;
-				adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
-				if adb devices | grep 5555 >/dev/null; then
-					echo "You may disconnect USB now";
-				else
-					/bin/bash /home/$(whoami)/.bash_functions dphone setup;
-				fi
+		if timeout 15 bash -c waitForUSB; then
+			adb kill-server;
+			adb start-server 2>/dev/null;
+			waitForUSB;
+			if [ -z "$(hostname -I)" ]; then
+				echo "Connect to Wifi";
 			else
-				echo "Phone not on the same network";
+				if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ]; then
+					adb tcpip 5555 >/dev/null;
+					waitForUSB;
+					adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
+					if adb devices | grep 5555 >/dev/null; then
+						echo "Wireless connection successful";
+					else
+						echo "Some error occured. Trying again ..."
+						/bin/bash /home/$(whoami)/.bash_functions dphone;
+					fi
+				else
+					echo "Phone on different network";
+				fi
 			fi
+			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		else
+			echo "No USB device detected"
+		fi
+	else
+		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		if ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) >/dev/null; then
+			echo "Wireless connection active"
+		else
+			echo "Phone on a different network"
 		fi
 	fi
-	(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
 }
 
 "$@"
