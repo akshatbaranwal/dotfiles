@@ -223,57 +223,78 @@ conservationMode () {
     cd ~-
 }
 
-# phone on pc
+# install adb and scrcpy
+# connect phone and pc to same network
+# turn on usb debugging on phone
+# run this
+# disconnect usb
 
 # use this to create a shortcut
-# gnome-terminal -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 1 tail -f $HOME/nohup.out; done"
+# gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 1.5 tail -f $HOME/nohup.out; done"
 
 dphone() {
+	pingPhone() {
+		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
+	}
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
 			sleep 1;
 		done;
 	}
 	export -f waitForUSB;
+	start() {
+		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+	}
+	setup() {
+		adb kill-server;
+		adb start-server 2>/dev/null;
+		waitForUSB;
+		if [ -z "$(hostname -I)" ]; then
+			echo "Connect to Wifi";
+		else
+			if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ] 2>/dev/null; then
+				adb tcpip 5555 >/dev/null;
+				waitForUSB;
+				while ! adb devices 2>/dev/null | grep 5555 >/dev/null; do
+					adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
+				done;
+				echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')";
+			else
+				echo "Phone on a different network";
+			fi
+		fi
+	}
 	if ! ps x | grep -v grep | grep adb >/dev/null; then
 		adb start-server 2>/dev/null
 	fi
-	if [ $(adb devices | wc -l) -eq 2 ] || ([ $(adb devices | wc -l) -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || ! ping -c 1 $(adb devices | head -n2 | tail -n1 | awk '{print $1}' | cut -f1 -d:) >/dev/null)); then
-		if ! adb devices -l | grep "\busb\b" >/dev/null; then
+	if [ -z "$(hostname -I)" ]; then
+		echo "Wifi Not Connected";
+	fi
+	if [ $(adb devices | wc -l) -eq 2 ] || ([ $(adb devices | wc -l) -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
+		if ! timeout 1 bash -c waitForUSB; then
 			echo "Waiting for USB connection...";
-		fi
-		if timeout 15 bash -c waitForUSB; then
-			adb kill-server;
-			adb start-server 2>/dev/null;
-			waitForUSB;
-			if [ -z "$(hostname -I)" ]; then
-				echo "Connect to Wifi";
-			else
-				if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ]; then
-					adb tcpip 5555 >/dev/null;
-					waitForUSB;
-					adb connect $(adb shell ip route | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
-					if adb devices | grep 5555 >/dev/null; then
-						echo "Wireless connection successful";
-					else
-						echo "Some error occured. Trying again ..."
-						/bin/bash /home/$(whoami)/.bash_functions dphone;
-					fi
-				else
-					echo "Phone on different network";
-				fi
-			fi
-			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		fi	
+		while ! timeout 1 bash -c waitForUSB && [ -z "$(hostname -I)" ]; do
+			sleep 1;
+		done
+		if [ ! -z "$(hostname -I)" ] && ! adb devices -l | grep "\busb\b" >/dev/null && [ $(adb devices | wc -l) -eq 3 ] && ! pingPhone; then
+			start;
+		elif timeout 30 bash -c waitForUSB; then
+			setup;
+			start;
 		else
-			echo "No USB device detected"
+			echo "No USB device detected";
 		fi
 	else
-		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
-		if ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) >/dev/null; then
-			echo "Wireless connection active"
-		else
-			echo "Phone on a different network"
+		if adb devices -l | grep "\busb\b" >/dev/null && ! [ $(adb -d shell ip route | grep wlan0 | awk '{print $9}') = $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) ] 2>/dev/null; then
+			setup;
 		fi
+		if ! pingPhone; then
+			echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')";
+		else
+			echo "Phone on a different network";
+		fi
+		start;
 	fi
 }
 
