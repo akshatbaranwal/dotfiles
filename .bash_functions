@@ -46,16 +46,46 @@ tpc(){
 
 # brightness hack
 b() {
-	echo $((685*$1+71)) | sudo tee /sys/class/backlight/intel_backlight/brightness > /dev/null
+	cd /sys/class/backlight/intel_backlight
+	brightness=$(cat brightness)
+	case $# in
+		1)
+			brightness=$((685*$1));
+			;;
+		2)
+			if [ $1 = '--increase' ]; then
+				brightness=$(($brightness+$2*685));
+			elif [ $1 = '--decrease' ]; then
+				brightness=$(($brightness-$2*685));
+			else
+				echo "Usage: b [--increase|--decrease] brightness_percent";
+				return 1;
+			fi
+			;;
+		*)
+			echo "Usage: b [--increase|--decrease] brightness_percent";
+			return 1;
+			;;
+	esac
+	if [ $brightness -lt 0 ]; then
+		brightness=0;
+	elif [ $brightness -gt $(cat max_brightness) ]; then
+		brightness=$(cat max_brightness);
+	fi
+	echo $brightness | sudo tee brightness >/dev/null
+	cd ~-
 }
 
 # install deb pkg with dependencies
-deb(){
-	ls -c | grep .*\.deb$;
-	for var in "$@"; do
-		sudo dpkg -i $var
-	done
-	sudo apt install -f
+deb() {
+	if [ $# -eq 0 ]; then
+		ls -c | grep --color=NEVER .*\.deb$;
+	else
+		for var in "$@"; do
+			sudo dpkg -i $var
+		done
+		sudo apt install -f
+	fi
 }
 
 # quick C/C++ compile and run
@@ -166,7 +196,7 @@ Fri: DBMS CN   DAA
 PPL https://meet.google.com/lookup/ew55xe2fqk?authuser=1
 SOE https://meet.google.com/lookup/aifyofpkns?authuser=1
 CN https://meet.google.com/lookup/f76m7gdhyh?authuser=1
-DBMS https://iiita.webex.com/iiita/j.php?MTID=m9f1a2a578ec8cb0473c4bffcb24d07b8
+DBMS https://iiita.webex.com/iiita/j.php?MTID=mbaa03df1c03de37ee86f93989ae916fc
 DBMS_TUT https://meet.google.com/lookup/hwlsbmorxm?authuser=1
 DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 
@@ -223,9 +253,25 @@ conservationMode () {
     cd ~-
 }
 
+sphone() {
+	if [ -z $1 ]; then
+		ssh -p 8022 u0_a188@$(ip neigh | grep -vE "FAILED" | grep -oE "[0-9]{3}\.[0-9]{3}\.[0-9]{2}\.[0-9]{1,3}")
+	else
+		ssh -p 8022 u0_a188@$1
+	fi
+}
+
+mphone() {
+	if [ -z $1 ]; then
+		sudo sshfs -o allow_other u0_a188@$(ip neigh | grep -vE "FAILED" | grep -oE "[0-9]{3}\.[0-9]{3}\.[0-9]{2}\.[0-9]{1,3}"):/storage/emulated/0 /media/akshat/Phone -p 8022
+	else
+		sudo sshfs -o allow_other u0_a188@$1:/storage/emulated/0 /media/akshat/Phone -p 8022
+	fi
+}
+
 # install adb and scrcpy
 # connect phone and pc to same network
-# turn on usb debugging on phone
+# enable usb debugging on phone
 # run this
 # disconnect usb
 
@@ -233,19 +279,26 @@ conservationMode () {
 # gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 1.5 tail -f $HOME/nohup.out; done"
 
 dphone() {
-	pingPhone() {
-		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
-	}
+	if ! which adb >/dev/null; then
+		echo "Run: sudo apt install adb"
+		return;
+	elif ! which scrcpy >/dev/null; then
+		echo "Run: sudo apt install scrcpy"
+		return;
+	fi
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
 			sleep 1;
 		done;
 	}
 	export -f waitForUSB;
-	start() {
-		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+	pingPhone() {
+		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
-	setup() {
+	displayPhone() {
+		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+	}
+	connectPhone() {
 		adb kill-server;
 		adb start-server 2>/dev/null;
 		waitForUSB;
@@ -278,23 +331,25 @@ dphone() {
 			sleep 1;
 		done
 		if [ ! -z "$(hostname -I)" ] && ! adb devices -l | grep "\busb\b" >/dev/null && [ $(adb devices | wc -l) -eq 3 ] && ! pingPhone; then
-			start;
+			displayPhone;
 		elif timeout 30 bash -c waitForUSB; then
-			setup;
-			start;
+			connectPhone;
+			displayPhone;
 		else
 			echo "No USB device detected";
 		fi
 	else
 		if adb devices -l | grep "\busb\b" >/dev/null && ! [ $(adb -d shell ip route | grep wlan0 | awk '{print $9}') = $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) ] 2>/dev/null; then
-			setup;
+			connectPhone;
 		fi
 		if ! pingPhone; then
 			echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')";
+			displayPhone;
+		elif adb devices -l | grep "\busb\b" >/dev/null; then
+			displayPhone;
 		else
 			echo "Phone on a different network";
 		fi
-		start;
 	fi
 }
 
