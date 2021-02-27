@@ -59,11 +59,13 @@ b() {
 				brightness=$(($brightness-$2*685));
 			else
 				echo "Usage: b [--increase|--decrease] brightness_percent";
+				cd ~-;
 				return 1;
 			fi
 			;;
 		*)
 			echo "Usage: b [--increase|--decrease] brightness_percent";
+			cd ~-;
 			return 1;
 			;;
 	esac
@@ -84,7 +86,7 @@ deb() {
 		for var in "$@"; do
 			sudo dpkg -i $var
 		done
-		sudo apt install -f
+		yes | sudo apt install -f
 	fi
 }
 
@@ -211,8 +213,10 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 				else if(col >= 14 && col <= 16) print $4;
 				}') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send --hint int:transient:1" "cut -f2 -d' ' | xargs xdg-open" & exit
 	fi
+	unset classDetails
 }
 
+# mycli shortcut
 sql() {
 	if ! systemctl --no-pager status mariadb >/dev/null; then
 		systemctl start mariadb
@@ -234,6 +238,7 @@ shutdownCheck() {
 	else
 		echo "No Shutdown Scheduled"
 	fi
+	unset k
 }
 
 # bubbyee
@@ -253,30 +258,41 @@ conservationMode () {
     cd ~-
 }
 
+# ssh to phone
 sphone() {
 	if [ -z $1 ]; then
-		ssh -p 8022 u0_a188@$(ip neigh | grep -vE "FAILED" | grep -oE "[0-9]{3}\.[0-9]{3}\.[0-9]{2}\.[0-9]{1,3}")
+		ssh -p 8022 u0_a188@$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)
 	else
 		ssh -p 8022 u0_a188@$1
 	fi
 }
 
+# mount phone
 mphone() {
-	if [ -z $1 ]; then
-		sudo sshfs -o allow_other u0_a188@$(ip neigh | grep -vE "FAILED" | grep -oE "[0-9]{3}\.[0-9]{3}\.[0-9]{2}\.[0-9]{1,3}"):/storage/emulated/0 /media/akshat/Phone -p 8022
-	else
-		sudo sshfs -o allow_other u0_a188@$1:/storage/emulated/0 /media/akshat/Phone -p 8022
+	if [ -z "$(ls /media/akshat/Phone)" ]; then
+		if [ -z $1 ]; then
+			sudo sshfs -o allow_other u0_a188@$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1):/storage/emulated/0 /media/akshat/Phone -p 8022;
+		else
+			sudo sshfs -o allow_other u0_a188@$1:/storage/emulated/0 /media/akshat/Phone -p 8022;
+		fi
 	fi
+	if [ -z "$(ls /media/akshat/Phone)" ]; then
+		echo "Mount Failed";
+	else
+		cd /media/akshat/Phone;
+	fi
+
 }
 
-# install adb and scrcpy
+# display phone screen on ur laptop
+
 # connect phone and pc to same network
 # enable usb debugging on phone
 # run this
 # disconnect usb
 
 # use this to create a shortcut
-# gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 1.5 tail -f $HOME/nohup.out; done"
+# gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 2 tail -f $HOME/nohup.out; done"
 
 dphone() {
 	if ! which adb >/dev/null; then
@@ -296,7 +312,10 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
-		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --window-x 1531 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --lock-video-orientation 0 --window-x 1531 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
+			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
+		fi
 	}
 	connectPhone() {
 		adb kill-server;
@@ -351,6 +370,26 @@ dphone() {
 			echo "Phone on a different network";
 		fi
 	fi
+}
+
+# search through the history
+hgrep() {
+	temp_history="$(history)"
+	for word in "$@"; do
+		temp_history=$(echo "$temp_history" | grep $word)
+	done;
+	echo "$temp_history"
+	unset temp_history
+}
+
+# easily change Prompt
+ps1() {
+	if [ "$#" -eq 0 ]; then
+		cat ~/.ps1_default > ~/.ps1_current;
+	else
+		echo "\[\e]0;$1: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]$1\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ " > ~/.ps1_current;
+	fi
+	PS1="$(cat ~/.ps1_current)";
 }
 
 "$@"

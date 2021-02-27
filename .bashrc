@@ -110,7 +110,7 @@ if ! shopt -oq posix; then
   fi
 fi
 # PS1='\e[1;32m[\W]> \e[m'
-export PATH="/home/akshat/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin"
+export PATH="/home/akshat/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
 
@@ -124,14 +124,17 @@ source ~/.git-completion.bash
 source ~/.tldr-completion.bash
 
 # some miscellaneous functions
-
 if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
 
-# shortcut for small brightness change
-# /bin/bash -c "echo <passwd> | sudo -S /home/akshat/.bash_functions b $(($(cat /sys/class/backlight/intel_backlight/brightness)/685+1)) 2>/dev/null"
-
 # snippet to run as button
 # echo <passwd> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send --hint int:transient:1
 
+# works along with ps1 function in ~/.bash_functions
+if [ -f ~/.ps1_current ]; then
+	PS1="$(cat ~/.ps1_current)";
+else
+	echo $PS1 > ~/.ps1_default;
+	cp ~/.ps1_default ~/.ps1_current;
+fi
