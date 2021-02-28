@@ -109,7 +109,7 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-# PS1='\e[1;32m[\W]> \e[m'
+# PS1='\[\e[1;32m\][\W]> \[\e[m\]'
 export PATH="/home/akshat/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
@@ -117,7 +117,7 @@ export BAT_PAGER="less -RF"
 # Git configuration
 # Branch name in prompt
 source ~/.git-prompt.sh
-PS1='\e[1;32m[\W\e[m\e[0;32m$(__git_ps1 " (%s)")\e[m\e[1;32m]> \e[m'
+PS1='\[\e[1;32m\][\W\[\e[m\e[0;32m\]$(__git_ps1 " (%s)")\[\e[m\e[1;32m\]]> \[\e[m\]'
 export PROMPT_COMMAND='echo -ne "\033]0;${PWD/#$HOME/~}\007"'
 # Tab completion for branch names
 source ~/.git-completion.bash
@@ -132,9 +132,4 @@ fi
 # echo <passwd> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send --hint int:transient:1
 
 # works along with ps1 function in ~/.bash_functions
-if [ -f ~/.ps1_current ]; then
-	PS1="$(cat ~/.ps1_current)";
-else
-	echo $PS1 > ~/.ps1_default;
-	cp ~/.ps1_default ~/.ps1_current;
-fi
+PS1="$(cat ~/.ps1_current)";

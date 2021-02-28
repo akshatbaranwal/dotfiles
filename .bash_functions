@@ -312,7 +312,7 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
-		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --lock-video-orientation 0 --window-x 1531 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --lock-video-orientation 0 --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
 		if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
 			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
 		fi
@@ -384,10 +384,10 @@ hgrep() {
 
 # easily change Prompt
 ps1() {
-	if [ "$#" -eq 0 ]; then
+	if [ $# -eq 0 ]; then
 		cat ~/.ps1_default > ~/.ps1_current;
 	else
-		echo "\[\e]0;$1: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[01;32m\]$1\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ " > ~/.ps1_current;
+		echo "\[\e]0;$@: \W\a\]\[\e[1;31m\]$@\[\e[m\]:\[\e[1;34m\]\W\[\e[m\]\$ " > ~/.ps1_current;
 	fi
 	PS1="$(cat ~/.ps1_current)";
 }
