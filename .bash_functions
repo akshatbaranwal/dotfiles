@@ -243,7 +243,7 @@ shutdownCheck() {
 
 # bubbyee
 byee() {
-	shutdown -P +${1:-0}
+	sudo shutdown -P +${1:-0}
 }
 
 # battery conservation mode toggle
@@ -312,10 +312,14 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
-		(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --always-on-top --lock-video-orientation 0 --window-x 1531 --window-y 211 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
-		if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
-			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
+		if ps x | grep -v grep | grep vscode > /dev/null; then
+			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 212 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+		else
+			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 212 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
 		fi
+		#if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
+		#	adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
+		#fi
 	}
 	connectPhone() {
 		adb kill-server;
@@ -390,6 +394,24 @@ ps1() {
 		echo "\[\e]0;$@: \W\a\]\[\e[1;31m\]$@\[\e[m\]:\[\e[1;34m\]\W\[\e[m\]\$ " > ~/.ps1_current;
 	fi
 	PS1="$(cat ~/.ps1_current)";
+}
+
+headphone() {
+	mac() {
+		echo $(pacmd list-cards | grep bluez_card | cut -f2 -d. | tr _ : | tr -d '>')
+	}
+	index() {
+		pacmd list-cards | grep -B1 bluez_card | grep index | awk '{print $2}'
+	}
+	if pacmd list-cards | grep bluez_card >/dev/null; then
+		pacmd set-card-profile $(index) $(echo -e "a2dp_sink\nheadset_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")
+	else
+		bluetoothctl connect 00:16:94:44:A1:EC
+		sleep 5;
+		if ! pacmd list-cards | grep bluez_card >/dev/null; then
+			notify-send --hint int:transient:1 "Headphone Not Connected"
+		fi
+	fi
 }
 
 "$@"

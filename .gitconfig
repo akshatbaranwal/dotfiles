@@ -6,3 +6,5 @@
 	pager = less -+FX
 [alias]
 	co = checkout
+[init]
+	defaultBranch = main

@@ -133,3 +133,9 @@ fi
 
 # works along with ps1 function in ~/.bash_functions
 PS1="$(cat ~/.ps1_current)";
+
+export QT_DEVICE_PIXEL_RATIO=0
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_SCREEN_SCALE_FACTORS=1
+export QT_SCALE_FACTOR=1
+unset SESSION_MANAGER
