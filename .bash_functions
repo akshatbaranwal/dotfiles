@@ -281,7 +281,6 @@ mphone() {
 	else
 		cd /media/akshat/Phone;
 	fi
-
 }
 
 # display phone screen on ur laptop
@@ -407,11 +406,17 @@ headphone() {
 		pacmd set-card-profile $(index) $(echo -e "a2dp_sink\nheadset_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")
 	else
 		bluetoothctl connect 00:16:94:44:A1:EC
-		sleep 5;
+		sleep 3;
 		if ! pacmd list-cards | grep bluez_card >/dev/null; then
 			notify-send --hint int:transient:1 "Headphone Not Connected"
 		fi
 	fi
+}
+
+cd() {
+	builtin cd "$@"
+	clear -x
+	ls
 }
 
 "$@"
