@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# notify for root
+notify_send() {
+    local display=":$(ls /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)";
+    local user=$(who | grep '('$display')' | awk '{print $1}' | head -n 1);
+    local uid=$(id -u $user);
+    sudo -u $user DISPLAY=$display DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus notify-send  --hint int:transient:1 "$@"
+}
+
 # change rubbish file names of tv series episodes to a more sensible format
 episodeRename() {
 	SAVEIFS=$IFS
@@ -203,15 +211,15 @@ DBMS_TUT https://meet.google.com/lookup/hwlsbmorxm?authuser=1
 DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
 
 	if [ $(date +%u) -gt 5 ]; then
-		notify-send --hint int:transient:1 "Enjoy Your Weekend!"
+		notify_send "Enjoy Your Weekend!"
 	elif [ $(date +%H) -gt 16 ] || [ $(date +%H) -lt 8 ]; then
-		notify-send --hint int:transient:1 "No More Classes Left!"
+		notify_send "No More Classes Left!"
 	else
 		echo "$classDetails" | grep -iw $(echo "$classDetails" | awk -v row="$(($(date +%u)+3))" -v col="$(date +%H)" 'NR==row { 
 				if(col >= 8 && col <= 10) print $2; 
 				else if(col >= 11 && col <= 13) print $3; 
 				else if(col >= 14 && col <= 16) print $4;
-				}') | tail -n1 | pee "cut -f1 -d' ' | xargs notify-send --hint int:transient:1" "cut -f2 -d' ' | xargs xdg-open" & exit
+				}') | tail -n1 | pee "cut -f1 -d' ' | xargs $HOME/.bash_functions notify_send" "cut -f2 -d' ' | xargs xdg-open"
 	fi
 	unset classDetails
 }
@@ -251,9 +259,9 @@ conservationMode () {
 	cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004\:00/
     echo $((1-$(cat conservation_mode))) | sudo tee conservation_mode > /dev/null;
     if [ $(cat conservation_mode) -eq 1 ]; then
-        echo Conservation Mode ON;
+		notify_send "Conservation Mode ON"
     else
-        echo Conservation Mode OFF;
+		notify_send "Conservation Mode OFF"
     fi
     cd ~-
 }
@@ -311,10 +319,15 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
+		# adb shell input keyevent 26 && adb shell input keyevent 82 && adb shell input text 4739 && adb shell input keyevent 66 && sleep 1
+		pkill scrcpy
 		if ps x | grep -v grep | grep vscode > /dev/null; then
-			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 212 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
 		else
-			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 212 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1 &);
+			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+		fi
+		if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
+			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell input keyevent 26;
 		fi
 		#if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
 		#	adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
@@ -408,15 +421,20 @@ headphone() {
 		bluetoothctl connect 00:16:94:44:A1:EC
 		sleep 3;
 		if ! pacmd list-cards | grep bluez_card >/dev/null; then
-			notify-send --hint int:transient:1 "Headphone Not Connected"
+			notify_send "Headphone Not Connected"
 		fi
 	fi
 }
 
 cd() {
-	builtin cd "$@"
-	clear -x
-	ls
+	if builtin cd "$@"; then
+		clear -x
+		ls
+	fi
+}
+
+cb() {
+	xclip -sel clip "$@"
 }
 
 "$@"

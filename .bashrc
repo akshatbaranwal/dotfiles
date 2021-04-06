@@ -110,7 +110,7 @@ if ! shopt -oq posix; then
   fi
 fi
 # PS1='\[\e[1;32m\][\W]> \[\e[m\]'
-export PATH="/home/akshat/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin"
+export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
 
@@ -129,7 +129,7 @@ if [ -f ~/.bash_functions ]; then
 fi
 
 # snippet to run as button
-# echo <passwd> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send --hint int:transient:1
+# echo <passwd> | sudo -S $HOME/.bash_functions <function> 2>/dev/null | xargs -d '\n' notify-send --hint int:transient:1
 
 # works along with ps1 function in ~/.bash_functions
 PS1="$(cat ~/.ps1_current)";

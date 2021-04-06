@@ -1,7 +1,6 @@
 alias aliases='cd; vim .bash_aliases; source .bash_aliases; sort .bash_aliases > .aliass; cat .aliass > .bash_aliases; rm .aliass; cd ~-'
 alias bashfn='vim ~/.bash_functions; source ~/.bash_functions'
 alias bashrc='vim ~/.bashrc; source ~/.bashrc'
-alias cat='bat -pp'
 alias ...='cd ../..'
 alias ..='cd ..'
 alias clg='cd /media/akshat/Data/Documents/IIITA'
@@ -10,7 +9,7 @@ alias docs='cd /media/akshat/Data/Documents'
 alias dow='cd /media/akshat/Data/Downloads'
 alias ERROR='sudo rm /var/lib/apt/lists/lock;sudo rm /var/cache/apt/archives/lock;sudo rm /var/lib/dpkg/lock'
 alias fd='fdfind'
-alias filetypes="find . -type f | sed -rn 's|.*/[^/]+\.([^/.]+)$|\1|p' | sort | uniq -c"
+alias files="find . -type f | sed -rn 's|.*/[^/]+\.([^/.]+)$|\1|p' | sort | uniq -c | sort -nr"
 alias flut='cd /media/akshat/Data/Documents/Coding/Udemy/Flutter/Complete\ Guide'
 alias iiit='cd ~/ProxyMan;./main.sh load iiit;cd ~-; echo'
 alias insta='py /home/akshat/Documents/MyCodes/Python/insta.py'
