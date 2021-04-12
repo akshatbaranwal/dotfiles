@@ -302,13 +302,19 @@ mphone() {
 # gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 2 tail -f $HOME/nohup.out; done"
 
 dphone() {
+	pkill scrcpy
 	if ! which adb >/dev/null; then
-		echo "Run: sudo apt install adb"
-		return;
+		sudo apt install adb
 	elif ! which scrcpy >/dev/null; then
-		echo "Run: sudo apt install scrcpy"
-		return;
+		sudo apt install scrcpy
 	fi
+	unlock() {
+		e=$(adb devices | head -n2 | tail -n1 | awk '{print $1}')
+		if [ $(adb -s $e shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
+			adb -s $e shell input keyevent 26;
+		fi
+		adb -s $e shell input keyevent 26 && adb -s $e shell input keyevent 82 && adb -s $e shell input text $1 && adb -s $e shell input keyevent 66
+	}
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
 			sleep 1;
@@ -319,14 +325,20 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
-		# adb shell input keyevent 26 && adb shell input keyevent 82 && adb shell input text 4739 && adb shell input keyevent 66 && sleep 1
-		pkill scrcpy
+		if adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 > /dev/null; then
+			unlock 4739 && sleep 1
+		fi
 		if ps x | grep -v grep | grep vscode > /dev/null; then
 			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
 		else
 			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
 		fi
-		if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
+		if adb devices -l | grep "\busb\b" >/dev/null; then
+			sleep 4
+		else
+			sleep 1
+		fi
+		if ! ps x | grep -v grep | grep scrcpy > /dev/null && [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
 			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell input keyevent 26;
 		fi
 		#if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
@@ -419,10 +431,10 @@ headphone() {
 		pacmd set-card-profile $(index) $(echo -e "a2dp_sink\nheadset_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")
 	else
 		bluetoothctl connect 00:16:94:44:A1:EC
-		sleep 3;
-		if ! pacmd list-cards | grep bluez_card >/dev/null; then
-			notify_send "Headphone Not Connected"
-		fi
+		#sleep 3;
+		#if ! pacmd list-cards | grep bluez_card >/dev/null; then
+		#	notify_send "Headphone Not Connected"
+		#fi
 	fi
 }
 
