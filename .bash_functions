@@ -53,7 +53,7 @@ tpc(){
 }
 
 # brightness hack
-b() {
+brightness() {
 	cd /sys/class/backlight/intel_backlight
 	brightness=$(cat brightness)
 	case $# in
@@ -130,14 +130,14 @@ jv() {
 
 # toggle turbo boost
 turbo() {
-	cd /sys/devices/system/cpu/intel_pstate
+	cd /sys/devices/system/cpu/intel_pstate > /dev/null
 	echo $((1-$(cat no_turbo))) | sudo tee no_turbo >/dev/null
 	if [ $(cat no_turbo) -eq 1 ]; then
 		echo Turbo Boost OFF
 	else
 		echo Turbo Boost ON
 	fi
-	cd ~-
+	cd ~- > /dev/null
 }
 
 
@@ -242,6 +242,9 @@ shutdownCheck() {
 		echo ${k:=n} > /dev/null
 		if [ ${k:0:1} = 'y' ] || [ ${k:0:1} = 'Y' ]; then
 			shutdown -c
+			echo "Shutdown Cancelled"
+		else
+			echo "Shutdown NOT Cancelled"
 		fi
 	else
 		echo "No Shutdown Scheduled"
@@ -251,19 +254,19 @@ shutdownCheck() {
 
 # bubbyee
 byee() {
-	sudo shutdown -P +${1:-0}
+	shutdown -P +${1:-0}
 }
 
 # battery conservation mode toggle
 conservationMode () {
-	cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004\:00/
+	cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004\:00/ >/dev/null
     echo $((1-$(cat conservation_mode))) | sudo tee conservation_mode > /dev/null;
     if [ $(cat conservation_mode) -eq 1 ]; then
 		notify_send "Conservation Mode ON"
     else
 		notify_send "Conservation Mode OFF"
     fi
-    cd ~-
+    cd ~- >/dev/null
 }
 
 # ssh to phone
@@ -311,16 +314,16 @@ dphone() {
 	unlock() {
 		e=$(adb devices | head -n2 | tail -n1 | awk '{print $1}')
 		if [ $(adb -s $e shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
-			adb -s $e shell input keyevent 26;
+			adb -s $e shell input keyevent 26
 		fi
 		adb -s $e shell input keyevent 26 && adb -s $e shell input keyevent 82 && adb -s $e shell input text $1 && adb -s $e shell input keyevent 66
 	}
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
-			sleep 1;
+			sleep 1
 		done;
 	}
-	export -f waitForUSB;
+	export -f waitForUSB
 	pingPhone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
@@ -329,9 +332,11 @@ dphone() {
 			unlock 4739 && sleep 1
 		fi
 		if ps x | grep -v grep | grep vscode > /dev/null; then
-			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+			#(scrcpy --always-on-top --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
 		else
-			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --stay-awake --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+			#(scrcpy --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
 		fi
 		if adb devices -l | grep "\busb\b" >/dev/null; then
 			sleep 4
@@ -339,28 +344,43 @@ dphone() {
 			sleep 1
 		fi
 		if ! ps x | grep -v grep | grep scrcpy > /dev/null && [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
-			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell input keyevent 26;
+			adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell input keyevent 26
 		fi
 		#if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
 		#	adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
 		#fi
 	}
 	connectPhone() {
-		adb kill-server;
-		adb start-server 2>/dev/null;
-		waitForUSB;
+		adb kill-server
+		adb start-server 2>/dev/null
+		waitForUSB
 		if [ -z "$(hostname -I)" ]; then
-			echo "Connect to Wifi";
+			echo "Connect Laptop to Wifi"
 		else
-			if [ $(hostname -I | cut -f1,2,3 -d.) = $(adb shell ip route | grep wlan0 | awk '{print $9}' | cut -f1,2,3 -d.) ] 2>/dev/null; then
-				adb tcpip 5555 >/dev/null;
-				waitForUSB;
-				while ! adb devices 2>/dev/null | grep 5555 >/dev/null; do
-					adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
-				done;
-				echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')";
-			else
-				echo "Phone on a different network";
+			if [ $(adb shell settings get global wifi_on) -eq 0 ]; then
+				adb shell svc wifi enable
+				# adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
+				# adb shell am force-stop com.steinwurf.adbjoinwifi
+				sleep 3
+			fi
+			echo Trying to connect
+			adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null
+			sleep 1
+			for i in {4..7}; do
+				if adb devices 2>/dev/null | grep 5555 >/dev/null; then
+					break
+				fi
+				echo "Trial $((i-3))"
+				adb shell svc wifi disable
+				adb shell svc wifi enable
+				# adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
+				# adb shell am force-stop com.steinwurf.adbjoinwifi
+				sleep $i
+				adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
+				sleep 1
+			done
+			if adb devices 2>/dev/null | grep 5555 >/dev/null; then
+				notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
 			fi
 		fi
 	}
@@ -368,34 +388,32 @@ dphone() {
 		adb start-server 2>/dev/null
 	fi
 	if [ -z "$(hostname -I)" ]; then
-		echo "Wifi Not Connected";
+		echo "Laptop Wifi Not Connected"
 	fi
 	if [ $(adb devices | wc -l) -eq 2 ] || ([ $(adb devices | wc -l) -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
 		if ! timeout 1 bash -c waitForUSB; then
-			echo "Waiting for USB connection...";
-		fi	
+			echo "Waiting for USB connection..."
+		fi
 		while ! timeout 1 bash -c waitForUSB && [ -z "$(hostname -I)" ]; do
-			sleep 1;
+			sleep 1
 		done
 		if [ ! -z "$(hostname -I)" ] && ! adb devices -l | grep "\busb\b" >/dev/null && [ $(adb devices | wc -l) -eq 3 ] && ! pingPhone; then
-			displayPhone;
-		elif timeout 30 bash -c waitForUSB; then
-			connectPhone;
-			displayPhone;
+			displayPhone
+		elif timeout 10 bash -c waitForUSB; then
+			connectPhone & displayPhone
 		else
-			echo "No USB device detected";
+			echo "No USB device detected"
 		fi
 	else
 		if adb devices -l | grep "\busb\b" >/dev/null && ! [ $(adb -d shell ip route | grep wlan0 | awk '{print $9}') = $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) ] 2>/dev/null; then
-			connectPhone;
-		fi
-		if ! pingPhone; then
-			echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')";
-			displayPhone;
+			connectPhone & displayPhone
+		elif ! pingPhone; then
+			notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
+			displayPhone
 		elif adb devices -l | grep "\busb\b" >/dev/null; then
-			displayPhone;
+			displayPhone
 		else
-			echo "Phone on a different network";
+			echo "Phone on a different network"
 		fi
 	fi
 }
@@ -438,6 +456,10 @@ headphone() {
 	fi
 }
 
+switchAudio() {
+	pactl set-default-sink "$(pactl list short sinks | grep -v "$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')\|PulseEffects" | awk '{print $2}')"
+}
+
 cd() {
 	if builtin cd "$@"; then
 		clear -x
@@ -447,6 +469,12 @@ cd() {
 
 cb() {
 	xclip -sel clip "$@"
+}
+
+open() {
+	for file in "$@"; do
+		find -maxdepth 1 -iname "$file" -print0 | xargs -0 -n1 xdg-open >/dev/null 2>&1
+	done
 }
 
 "$@"
