@@ -10,10 +10,15 @@ notify_send() {
 
 # change rubbish file names of tv series episodes to a more sensible format
 episodeRename() {
+	files=$(ls | grep -E "\.(mp3|mp4|mkv|avi)$")
+	prefix=$(echo "$files" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D')
+    suffix=$(echo "$files" | rev | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D' | rev)
+	if [ $prefix == $suffix ]; then return; fi
+	ext=$(echo "${files##*.}" | head -n1)
 	SAVEIFS=$IFS
 	IFS=$'\n'
-	for f in $(ls); do
-	   	mv -- "$f" "$(echo $f | grep -oE 'E[0-9]{2}').${f##*.}"
+	for f in $files; do
+		mv -iv -- "$f" "$(echo $f | sed "s/^$prefix\(.*\)$suffix$/\1/").$ext"
    	done
 	IFS=$SAVEIFS
 }
@@ -22,7 +27,7 @@ countdown(){
 	date1=$((`date +%s` + $1 + 60*${2:-0} + 3600*${3:-0})); 
 	while [ "$date1" -ge `date +%s` ]; do 
 		echo -ne " $(date -u --date @$(($date1 - `date +%s`)) +%H:%M:%S)\r";
-		sleep 0.1
+		sleep 0.2
 	done
 	echo
 }
@@ -30,8 +35,8 @@ countdown(){
 stopwatch(){
 	date1=$((`date +%s` + $1 + 60*${2:-0} + 3600*${3:-0}));
    	while [ "$date1" -ge `date +%s` ]; do 
-    	echo -ne " $(date -u --date @$((`date +%s` - $date1 + $1)) +%H:%M:%S)\r"; 
-    	sleep 0.1
+		echo -ne " $(date -u --date @$((`date +%s` - $date1 + $1)) +%H:%M:%S)\r";
+		sleep 0.2
    	done
    	echo
 }
@@ -306,17 +311,17 @@ mphone() {
 
 dphone() {
 	pkill scrcpy
-	if ! which adb >/dev/null; then
-		sudo apt install adb
-	elif ! which scrcpy >/dev/null; then
-		sudo apt install scrcpy
-	fi
 	unlock() {
+		password=4739
+		if ! adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 > /dev/null; then
+			return
+		fi
 		e=$(adb devices | head -n2 | tail -n1 | awk '{print $1}')
 		if [ $(adb -s $e shell dumpsys power | grep mWakefulness= | cut -f2 -d=) = 'Awake' ]; then
 			adb -s $e shell input keyevent 26
 		fi
-		adb -s $e shell input keyevent 26 && adb -s $e shell input keyevent 82 && adb -s $e shell input text $1 && adb -s $e shell input keyevent 66
+		adb -s $e shell input keyevent 26 && adb -s $e shell input keyevent 82 && adb -s $e shell input text $password && adb -s $e shell input keyevent 66
+		sleep 1
 	}
 	waitForUSB() {
 		while ! adb devices -l | grep "\busb\b" >/dev/null; do
@@ -328,16 +333,15 @@ dphone() {
 		ping -c 1 $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) | grep Unreachable >/dev/null
 	}
 	displayPhone() {
-		if adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 > /dev/null; then
-			unlock 4739 && sleep 1
+		unlock
+		parameters="-s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214"
+		if ! adb devices -l | grep "\busb\b" >/dev/null; then
+			parameters="${parameters} --max-fps 15 --bit-rate 2M"
 		fi
 		if ps x | grep -v grep | grep vscode > /dev/null; then
-			(scrcpy --always-on-top --bit-rate 2M --max-size 800 --max-fps 15 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
-			#(scrcpy --always-on-top --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
-		else
-			(scrcpy --bit-rate 2M --max-size 800 --max-fps 15 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
-			#(scrcpy --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') >/dev/null 2>&1)
+			parameters="${parameters} --always-on-top"
 		fi
+		(scrcpy $parameters >/dev/null 2>&1)
 		if adb devices -l | grep "\busb\b" >/dev/null; then
 			sleep 4
 		else
@@ -350,6 +354,12 @@ dphone() {
 		#	adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell monkey -p com.termux 1 >/dev/null;
 		#fi
 	}
+	connectPhoneToWifi() {
+		adb shell svc wifi enable
+		# adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
+		# adb shell am force-stop com.steinwurf.adbjoinwifi
+		sleep $1
+	}
 	connectPhone() {
 		adb kill-server
 		adb start-server 2>/dev/null
@@ -358,10 +368,7 @@ dphone() {
 			echo "Connect Laptop to Wifi"
 		else
 			if [ $(adb shell settings get global wifi_on) -eq 0 ]; then
-				adb shell svc wifi enable
-				# adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
-				# adb shell am force-stop com.steinwurf.adbjoinwifi
-				sleep 3
+				connectPhoneToWifi 3
 			fi
 			echo Trying to connect
 			adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null
@@ -372,14 +379,12 @@ dphone() {
 				fi
 				echo "Trial $((i-3))"
 				adb shell svc wifi disable
-				adb shell svc wifi enable
-				# adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
-				# adb shell am force-stop com.steinwurf.adbjoinwifi
-				sleep $i
-				adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null;
+				connectPhoneToWifi $i
+				adb connect $(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'):5555 >/dev/null
 				sleep 1
 			done
 			if adb devices 2>/dev/null | grep 5555 >/dev/null; then
+				echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
 				notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
 			fi
 		fi
@@ -400,14 +405,19 @@ dphone() {
 		if [ ! -z "$(hostname -I)" ] && ! adb devices -l | grep "\busb\b" >/dev/null && [ $(adb devices | wc -l) -eq 3 ] && ! pingPhone; then
 			displayPhone
 		elif timeout 10 bash -c waitForUSB; then
-			connectPhone & displayPhone
+			connectPhone &
+			sleep 1
+			displayPhone
 		else
 			echo "No USB device detected"
 		fi
 	else
 		if adb devices -l | grep "\busb\b" >/dev/null && ! [ $(adb -d shell ip route | grep wlan0 | awk '{print $9}') = $(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:) ] 2>/dev/null; then
-			connectPhone & displayPhone
+			connectPhone &
+			sleep 1
+			displayPhone
 		elif ! pingPhone; then
+			echo "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
 			notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
 			displayPhone
 		elif adb devices -l | grep "\busb\b" >/dev/null; then
@@ -449,10 +459,6 @@ headphone() {
 		pacmd set-card-profile $(index) $(echo -e "a2dp_sink\nheadset_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")
 	else
 		bluetoothctl connect 00:16:94:44:A1:EC
-		#sleep 3;
-		#if ! pacmd list-cards | grep bluez_card >/dev/null; then
-		#	notify_send "Headphone Not Connected"
-		#fi
 	fi
 }
 

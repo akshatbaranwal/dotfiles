@@ -1,4 +1,4 @@
-alias aliases='vim ~/.bash_aliases; sort ~/.bash_aliases > ~/.aliass; cat ~/.aliass > ~/.bash_aliases; rm ~/.aliass; source ~/.bash_aliases; cd ~-'
+alias aliases='vim ~/.bash_aliases; sort ~/.bash_aliases > ~/.aliass; cat ~/.aliass > ~/.bash_aliases; rm ~/.aliass; source ~/.bash_aliases;'
 alias bashfn='vim ~/.bash_functions; source ~/.bash_functions'
 alias bashrc='vim ~/.bashrc; source ~/.bashrc'
 alias ...='cd ../..'

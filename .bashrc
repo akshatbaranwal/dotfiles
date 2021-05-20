@@ -110,7 +110,7 @@ if ! shopt -oq posix; then
   fi
 fi
 # PS1='\[\e[1;32m\][\W]> \[\e[m\]'
-export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator"
+export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:$HOME/.cargo/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
 
