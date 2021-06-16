@@ -1,4 +1,3 @@
-# shellcheck shell=bash
 alias aliases='vim ~/.bash_aliases; sort ~/.bash_aliases > ~/.aliass; cat ~/.aliass > ~/.bash_aliases; rm ~/.aliass; source ~/.bash_aliases;'
 alias bashfn='vim ~/.bash_functions; source ~/.bash_functions'
 alias bashrc='vim ~/.bashrc; source ~/.bashrc'
@@ -38,6 +37,7 @@ alias udmy='cd /media/akshat/Data/Documents/Coding/Udemy'
 alias update='sudo apt update -y && sudo apt full-upgrade -y && sudo apt autoremove -y && sudo apt clean -y && sudo apt autoclean -y'
 alias updatetime='sudo timedatectl set-ntp off; sudo timedatectl set-ntp on'
 alias uphone='sudo umount /media/akshat/Phone'
+alias vs='code . & exit'
 alias webd='cd /media/akshat/Data/Documents/Coding/Udemy/Web\ Designing'
 alias ym='youtube-dl -f bestaudio -x --audio-format mp3 --embed-thumbnail --add-metadata --xattrs --geo-bypass'
 alias yv='youtube-dl -f best --embed-thumbnail --add-metadata --xattrs --geo-bypass --write-auto-sub --embed-sub --ignore-errors'

@@ -1,12 +1,13 @@
 #!/bin/bash
 
+# important env variables
+display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
+user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
+uid=$(id -u "$user")
+
 # notify for root
 notify_send() {
-    local display user uid
-    display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)";
-    user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1);
-    uid=$(id -u "$user");
-    sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus notify-send  --hint int:transient:1 "$@"
+    sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus notify-send --hint int:transient:1 "$@"
 }
 
 # change rubbish file names of tv series episodes to a more sensible format
@@ -27,29 +28,29 @@ trimFilenames() {
     echo Common Suffix: "${suffix%.*}"
     echo
     if [[ "$prefix" = "$suffix" ]] || [[ "$prefix.$ext" = "$suffix" ]] || [[ $suffix != *.$ext ]]; then
-        echo "No change done";
-        return;
+        echo "No change done"
+        return
     fi
     SAVEIFS=$IFS
     IFS=$'\n'
     for f in $files; do
-        mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix}+1))-$((${#f}-${#suffix}))).$ext"
-        mv -iv -- "${f%.*}.srt" "$(echo "$f" | cut -c $((${#prefix}+1))-$((${#f}-${#suffix}+1)))srt" 2>/dev/null
+        mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix}))).$ext"
+        mv -iv -- "${f%.*}.srt" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix} + 1)))srt" 2>/dev/null
     done
     IFS=$SAVEIFS
 }
 
-countdown(){
-    date1=$(($(date +%s) + $1 + 60*${2:-0} + 3600*${3:-0}));
+countdown() {
+    date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
-        echo -ne " $(date -u --date @$(("$date1" - $(date +%s))) +%H:%M:%S)\r";
+        echo -ne " $(date -u --date @$(("$date1" - $(date +%s))) +%H:%M:%S)\r"
         sleep 0.2
     done
     echo
 }
 
-stopwatch(){
-    date1=$(($(date +%s) + $1 + 60*${2:-0} + 3600*${3:-0}));
+stopwatch() {
+    date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
         echo -ne " $(date -u --date @$(($(date +%s) - "$date1" + $1)) +%H:%M:%S)\r"
         sleep 0.2
@@ -60,11 +61,12 @@ stopwatch(){
 # you'll need terminator and a profile named 'timer'
 timer() {
     Xaxis=$(xrandr --current | grep '\*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
-    terminator --geometry=280x1+$(("$Xaxis"/2-140))+0 -p "timer" -x bash ~/.bash_functions countdown "$1" "$2" "$3" 2>/dev/null & exit
+    terminator --geometry=280x1+$(("$Xaxis" / 2 - 140))+0 -p "timer" -x bash ~/.bash_functions countdown "$1" "$2" "$3" 2>/dev/null &
+    exit
 }
 
 # convert topcoder irritating test case format
-tpc(){
+tpc() {
     str="$*"
     str="${str//[\]\[\,\{\}\n]/}"
     echo
@@ -78,30 +80,30 @@ brightness() {
     cd /sys/class/backlight/intel_backlight || return
     brightness=$(cat brightness)
     case $# in
-        1)
-            brightness=$((685*$1));
-            ;;
-        2)
-            if [ "$1" = '--increase' ]; then
-                brightness=$((brightness+$2*685));
-            elif [ "$1" = '--decrease' ]; then
-                brightness=$((brightness-$2*685));
-            else
-                echo "Usage: b [--increase|--decrease] brightness_percent";
-                cd ~- || return;
-                return 1;
-            fi
-            ;;
-        *)
-            echo "Usage: b [--increase|--decrease] brightness_percent";
-            cd ~- || return;
-            return 1;
-            ;;
+    1)
+        brightness=$((685 * $1))
+        ;;
+    2)
+        if [ "$1" = '--increase' ]; then
+            brightness=$((brightness + $2 * 685))
+        elif [ "$1" = '--decrease' ]; then
+            brightness=$((brightness - $2 * 685))
+        else
+            echo "Usage: b [--increase|--decrease] brightness_percent"
+            cd ~- || return
+            return 1
+        fi
+        ;;
+    *)
+        echo "Usage: b [--increase|--decrease] brightness_percent"
+        cd ~- || return
+        return 1
+        ;;
     esac
     if [ $brightness -lt 0 ]; then
-        brightness=0;
+        brightness=0
     elif [ $brightness -gt "$(cat max_brightness)" ]; then
-        brightness=$(cat max_brightness);
+        brightness=$(cat max_brightness)
     fi
     echo "$brightness" | sudo tee brightness >/dev/null
     cd ~- || return
@@ -110,7 +112,7 @@ brightness() {
 # install deb pkg with dependencies
 deb() {
     if [ $# -eq 0 ]; then
-        ls -c -- *.deb
+        ls -c1 -- *.deb
     else
         for var in "$@"; do
             sudo dpkg -i "$var"
@@ -151,60 +153,60 @@ jv() {
 
 # toggle turbo boost
 turbo() {
-    cd /sys/devices/system/cpu/intel_pstate > /dev/null || return
-    echo $((1-$(cat no_turbo))) | sudo tee no_turbo >/dev/null
+    cd /sys/devices/system/cpu/intel_pstate >/dev/null || return
+    echo $((1 - $(cat no_turbo))) | sudo tee no_turbo >/dev/null
     if [ "$(cat no_turbo)" -eq 1 ]; then
         echo Turbo Boost Disabled
     else
         echo Turbo Boost Enabled
     fi
-    cd ~- > /dev/null || return
+    cd ~- >/dev/null || return
 }
-
 
 # function Extract for common file formats
 extract() {
-  SAVEIFS=$IFS
-  IFS="$(printf '\n\t')"
-  if [ -z "$1" ]; then
-    # display usage if no parameters given
-    echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
-    echo "       extract <path/file_name_1.ext> [path/file_name_2.ext] [path/file_name_3.ext]"
-  else
-    for n in "$@"
-    do
-      if [ -f "$n" ] ; then
-          case "${n%,}" in
-            *.cbt|*.tar.bz2|*.tar.gz|*.tar.xz|*.tbz2|*.tgz|*.txz|*.tar) 
-                         tar xvf "$n"       ;;
-            *.lzma)      unlzma ./"$n"      ;;
-            *.bz2)       bunzip2 ./"$n"     ;;
-            *.cbr|*.rar) unrar x -ad ./"$n" ;;
-            *.gz)        gunzip ./"$n"      ;;
-            *.cbz|*.epub|*.zip) unzip ./"$n";;
-            *.z)         uncompress ./"$n"  ;;
-            *.7z|*.apk|*.arj|*.cab|*.cb7|*.chm|*.deb|*.dmg|*.iso|*.lzh|*.msi|*.pkg|*.rpm|*.udf|*.wim|*.xar)
-                         7z x ./"$n"        ;;
-            *.xz)        unxz ./"$n"        ;;
-            *.exe)       cabextract ./"$n"  ;;
-            *.cpio)      cpio -id < ./"$n"  ;;
-            *.cba|*.ace) unace x ./"$n"     ;;
-            *.zpaq)      zpaq x ./"$n"      ;;
-            *.arc)       arc e ./"$n"       ;;
-            *.cso)       ciso 0 ./"$n" ./"$n.iso" && \
-                              extract "$n".iso && \rm -f "$n" ;;
-            *)
-                         echo "extract: '$n' - unknown archive method"
-                         return 1
-                         ;;
-          esac
-      else
-          echo "'$n' - file does not exist"
-          return 1
-      fi
-    done
-  fi
-  IFS=$SAVEIFS
+    SAVEIFS=$IFS
+    IFS="$(printf '\n\t')"
+    if [ -z "$1" ]; then
+        # display usage if no parameters given
+        echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
+        echo "       extract <path/file_name_1.ext> [path/file_name_2.ext] [path/file_name_3.ext]"
+    else
+        for n in "$@"; do
+            if [ -f "$n" ]; then
+                case "${n%,}" in
+                *.cbt | *.tar.bz2 | *.tar.gz | *.tar.xz | *.tbz2 | *.tgz | *.txz | *.tar)
+                    tar xvf "$n"
+                    ;;
+                *.lzma) unlzma ./"$n" ;;
+                *.bz2) bunzip2 ./"$n" ;;
+                *.cbr | *.rar) unrar x -ad ./"$n" ;;
+                *.gz) gunzip ./"$n" ;;
+                *.cbz | *.epub | *.zip) unzip ./"$n" ;;
+                *.z) uncompress ./"$n" ;;
+                *.7z | *.apk | *.arj | *.cab | *.cb7 | *.chm | *.deb | *.dmg | *.iso | *.lzh | *.msi | *.pkg | *.rpm | *.udf | *.wim | *.xar)
+                    7z x ./"$n"
+                    ;;
+                *.xz) unxz ./"$n" ;;
+                *.exe) cabextract ./"$n" ;;
+                *.cpio) cpio -id <./"$n" ;;
+                *.cba | *.ace) unace x ./"$n" ;;
+                *.zpaq) zpaq x ./"$n" ;;
+                *.arc) arc e ./"$n" ;;
+                *.cso) ciso 0 ./"$n" ./"$n.iso" &&
+                    extract "$n".iso && \rm -f "$n" ;;
+                *)
+                    echo "extract: '$n' - unknown archive method"
+                    return 1
+                    ;;
+                esac
+            else
+                echo "'$n' - file does not exist"
+                return 1
+            fi
+        done
+    fi
+    IFS=$SAVEIFS
 }
 
 # google classroom quick class join
@@ -240,7 +242,7 @@ DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
     elif [ "$(date +%H)" -gt 16 ] || [ "$(date +%H)" -lt 8 ]; then
         notify_send "No More Classes Left!"
     else
-        echo "$classDetails" | grep -iw "$(echo "$classDetails" | awk -v row="$(($(date +%u)+3))" -v col="$(date +%H)" 'NR==row {
+        echo "$classDetails" | grep -iw "$(echo "$classDetails" | awk -v row="$(($(date +%u) + 3))" -v col="$(date +%H)" 'NR==row {
                 if(col >= 8 && col <= 10) print $2;
                 else if(col >= 11 && col <= 13) print $3;
                 else if(col >= 14 && col <= 16) print $4;
@@ -260,11 +262,11 @@ sql() {
 
 # check if shutdown is scheduled
 shutdownCheck() {
-    k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)/1000000)))"
+    k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3) / 1000000)))"
     if [ "$(echo "$k" | cut -f4 -d' ')" -ne 1970 ]; then
         echo "$k"
         read -rp "Want to Cancel? [N/y] " k
-        echo "${k:=n}" > /dev/null
+        echo "${k:=n}" >/dev/null
         if [ ${k:0:1} = 'y' ] || [ ${k:0:1} = 'Y' ]; then
             shutdown -c
             echo "Shutdown Cancelled"
@@ -283,9 +285,9 @@ byee() {
 }
 
 # battery conservation mode toggle
-conservationMode () {
+conservationMode() {
     cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/ >/dev/null || return
-    echo $((1-$(cat conservation_mode))) | sudo tee conservation_mode > /dev/null;
+    echo $((1 - $(cat conservation_mode))) | sudo tee conservation_mode >/dev/null
     if [ "$(cat conservation_mode)" -eq 1 ]; then
         notify_send "Conservation Mode ON"
     else
@@ -307,13 +309,13 @@ sphone() {
 mphone() {
     if [ -z "$(ls /media/akshat/Phone)" ]; then
         if [ -z "$1" ]; then
-            sudo sshfs -o allow_other u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/akshat/Phone -p 8022;
+            sudo sshfs -o allow_other u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/akshat/Phone -p 8022
         else
-            sudo sshfs -o allow_other u0_a188@"$1":/storage/emulated/0 /media/akshat/Phone -p 8022;
+            sudo sshfs -o allow_other u0_a188@"$1":/storage/emulated/0 /media/akshat/Phone -p 8022
         fi
     fi
     if [ -z "$(ls /media/akshat/Phone)" ]; then
-        echo "Mount Failed";
+        echo "Mount Failed"
     else
         cd /media/akshat/Phone || return
     fi
@@ -333,7 +335,7 @@ dphone() {
     pkill scrcpy
     unlock() {
         password=4739
-        if ! adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 > /dev/null; then
+        if ! adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
             return
         fi
         e=$(adb devices | head -n2 | tail -n1 | awk '{print $1}')
@@ -346,11 +348,11 @@ dphone() {
     waitForUSB() {
         while ! adb devices -l | grep "\busb\b" >/dev/null; do
             sleep 1
-        done;
+        done
     }
     export -f waitForUSB
     pingPhone() {
-        ping -c 1 "$(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:)" | grep Unreachable >/dev/null
+        ping -c 1 "$(adb devices | tail -n2 | head -n1 | awk '{print $1}' | cut -f1 -d:)" 2>/dev/null | grep Unreachable >/dev/null 2>&1
     }
     displayPhone() {
         unlock
@@ -358,12 +360,12 @@ dphone() {
         if ! adb devices -l | grep "\busb\b" >/dev/null; then
             parameters+=(--max-fps 15 --bit-rate 2M)
         fi
-        if pgrep -f "vscode" > /dev/null; then
+        if pgrep -f vscode >/dev/null; then
             parameters+=(--always-on-top)
         fi
         (scrcpy "${parameters[@]}" >/dev/null 2>&1)
         sleep 1
-        if ! pgrep -f "scrcpy" > /dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+        if ! pgrep -f scrcpy >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
         fi
         #if [ $(adb -s $(adb devices | head -n2 | tail -n1 | awk '{print $1}') shell dumpsys activity services com.termux | wc -l) -eq 2 ]; then
@@ -371,6 +373,7 @@ dphone() {
         #fi
     }
     connectPhoneToWifi() {
+        adb shell svc wifi disable
         adb shell svc wifi enable
         # adb shell am start -n com.steinwurf.adbjoinwifi/.MainActivity -e ssid Vandanalok4G >/dev/null
         # adb shell am force-stop com.steinwurf.adbjoinwifi
@@ -380,8 +383,12 @@ dphone() {
         adb kill-server
         adb start-server 2>/dev/null
         waitForUSB
-        while ! curl -s --head --request GET www.google.com | grep "200 OK" > /dev/null; do
+        if ! curl -s --head --request GET www.google.com | grep "200 OK" >/dev/null; then
             nmcli radio wifi on
+            echo Connecting laptop to wifi
+        fi
+        while ! curl -s --head --request GET www.google.com | grep "200 OK" >/dev/null; do
+            sleep 1
         done
         if [ "$(adb shell settings get global wifi_on)" -eq 0 ]; then
             connectPhoneToWifi 3
@@ -391,17 +398,14 @@ dphone() {
         (displayPhone &)
         echo Trying to connect
         adb connect "$(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}')":5555 >/dev/null
-        sleep 1
         for i in {4..7}; do
+            sleep 1
             if adb devices 2>/dev/null | grep 5555 >/dev/null; then
                 break
             fi
-            echo "Trial $((i-3))"
-            adb shell svc wifi disable
+            echo "Trial $((i - 3))"
             connectPhoneToWifi "$i"
             adb connect "$(adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}')":5555 >/dev/null
-            adb shell ip route 2>/dev/null | grep wlan0 | awk '{print $9}'
-            sleep 1
         done
         if adb devices 2>/dev/null | grep 5555 >/dev/null; then
             echo -e "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
@@ -411,7 +415,7 @@ dphone() {
             notify-send "Could not connect"
         fi
     }
-    if ! pgrep -f "adb" >/dev/null; then
+    if ! pgrep -f adb >/dev/null; then
         adb start-server 2>/dev/null
     fi
     if [ "$(adb devices | wc -l)" -eq 2 ] || ([ "$(adb devices | wc -l)" -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
@@ -443,12 +447,142 @@ dphone() {
     fi
 }
 
+# dphone when USB connected
+dphone_usb() {
+    if (($(cat /home/akshat/.adb_in_progress))); then
+        exit
+    fi
+
+    echo 1 >/home/akshat/.adb_in_progress
+
+    pkill scrcpy
+
+    waitForUSB() {
+        while ! adb devices -l | grep "\busb\b"; do
+            echo Waiting for USB
+            sleep 1
+        done
+    }
+    export -f waitForUSB
+    unlock() {
+        password=4739
+        if ! adb -d shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000; then
+            return
+        fi
+        if [ "$(adb -d shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+            adb -d shell input keyevent 26
+        fi
+        adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
+        sleep 1
+    }
+    displayPhone() {
+        unlock
+        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 213)
+        if pgrep -f vscode >/dev/null; then
+            parameters+=(--always-on-top)
+        fi
+
+        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        echo 0 >/home/akshat/.adb_in_progress
+        if ! pgrep -f scrcpy >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+            adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
+        fi
+    }
+    restartPhoneWifi() {
+        echo Restarting Wifi on Phone
+        adb -d shell svc wifi disable
+        adb -d shell svc wifi enable
+        sleep "${1:-0}"
+    }
+    connectLaptopToWifi() {
+        if ! curl -s --head --request GET www.google.com | grep "200 OK"; then
+            nmcli radio wifi on
+            echo Connecting laptop to wifi
+        fi
+        while ! curl -s --head --request GET www.google.com | grep "200 OK"; do
+            sleep 1
+        done
+    }
+
+    waitForUSB
+    displayPhone &
+    connectLaptopToWifi
+
+    if [ "$(adb -d shell settings get global wifi_on)" -eq 0 ]; then
+        restartPhoneWifi 3
+    fi
+
+    phoneIp="$(adb -d shell ip route | grep wlan0 | awk '{print $9}')"
+
+    if adb devices | grep "$phoneIp" >/dev/null && ping -c 1 "$phoneIp" && ! ping -c 1 "$phoneIp" | grep Unreachable >/dev/null; then
+        notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
+    else
+        adb tcpip 5555
+        waitForUSB
+        displayPhone &
+        echo Trying to connect
+        adb connect "$phoneIp"
+        for i in {4..7}; do
+            sleep 1
+            if adb devices | grep "$phoneIp" >/dev/null; then
+                break
+            fi
+            echo "Trial $((i - 3))"
+            restartPhoneWifi "$i"
+            adb connect "$phoneIp"
+        done
+        if adb devices | grep "$phoneIp" >/dev/null; then
+            echo -e "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
+            notify_send "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
+        else
+            echo -e "Could not connect"
+            notify-send "Could not connect"
+        fi
+    fi
+}
+
+# dphone over wifi when USB disconnected
+dphone_wifi() {
+    unlock() {
+        password=4739
+        if ! adb -e shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
+            return
+        fi
+        if [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+            adb -e shell input keyevent 26
+        fi
+        adb -e shell input keyevent 26 && adb -e shell input keyevent 82 && adb -e shell input text $password && adb -e shell input keyevent 66
+        sleep 1
+    }
+    displayPhone() {
+        unlock
+        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 --max-fps 15 --bit-rate 2M)
+        if pgrep -f vscode >/dev/null; then
+            parameters+=(--always-on-top)
+        fi
+        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        if ! pgrep -f scrcpy >/dev/null && [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+            adb -e shell input keyevent 26
+        fi
+    }
+    displayPhone
+}
+
+# automate dphone using async udev rules
+autodphone() {
+    if [ "$1" = "connect" ]; then
+        echo "/home/akshat/.bash_functions dphone_usb" | at now
+    elif [ "$1" = "disconnect" ]; then
+        echo "/home/akshat/.bash_functions dphone_wifi" | at now
+    fi
+}
+
 # search through the history
 hgrep() {
     temp_history="$(history)"
     for word in "$@"; do
         temp_history=$(echo "$temp_history" | grep "$word")
-    done;
+    done
     echo "$temp_history"
     unset temp_history
 }
@@ -456,11 +590,11 @@ hgrep() {
 # easily change Prompt
 ps1() {
     if [ $# -eq 0 ]; then
-        cat ~/.ps1_default > ~/.ps1_current;
+        cat ~/.ps1_default >~/.ps1_current
     else
-        echo "\[\e]0;$*: \W\a\]\[\e[1;31m\]$*\[\e[m\]:\[\e[1;34m\]\W\[\e[m\]\$ " > ~/.ps1_current;
+        echo "\[\e]0;$*: \W\a\]\[\e[1;31m\]$*\[\e[m\]:\[\e[1;34m\]\W\[\e[m\]\$ " >~/.ps1_current
     fi
-    PS1="$(cat ~/.ps1_current)";
+    PS1="$(cat ~/.ps1_current)"
 }
 
 # toggle headphone profile a2dp_sink/headset_head_unit
@@ -519,11 +653,13 @@ opensubl() {
     ls | sort -n | grep -Ev "\.(mp3|mp4|avi|mkv|pdf|zip|html|srt)$" | tail -n+"${1:-0}" | xargs -d "\n" subl
 }
 openvlc() {
-    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 & exit
+    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 &
+    exit
 }
 
 ipynb() {
-    jupyter notebook "$@" & exit
+    jupyter notebook "$@" &
+    exit
 }
 
 # cycle through pulseeffects presets
@@ -535,9 +671,9 @@ pulsepreset() {
     fi
     for i in "${!presets[@]}"; do
         if [ "${presets[$i]}" = "$(cat ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"* | grep name | cut -f4 -d\")" ]; then
-            pulseeffects -l "${presets[$i+1]}"
-            echo -e "{\n    \"name\": \"${presets[$i+1]}\"\n}" > "$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*)"
-            if [ "${presets[$i+1]}" = "None" ]; then
+            pulseeffects -l "${presets[$i + 1]}"
+            echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*)"
+            if [ "${presets[$i + 1]}" = "None" ]; then
                 notify_send "Equalizer Off"
             fi
             return

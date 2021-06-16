@@ -52,6 +52,7 @@ if filereadable("/etc/vim/vimrc.local")
 endif
 
 set tabstop=4
+set expandtab
 set wrap
 set shiftwidth=4
 set softtabstop=4

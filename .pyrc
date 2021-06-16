@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
-sys.ps1='\x1b[1;49;32m>>>\x1b[0m '
-sys.ps2='\x1b[1;49;32m...\x1b[0m '
-#sys.ps1='\x1b[33m>>>\x1b[0m '      # dark yellow
-#sys.ps2='\x1b[31m...\x1b[0m '      # dark red
+sys.ps1 = '\x1b[1;49;32m>>>\x1b[0m '
+sys.ps2 = '\x1b[1;49;32m...\x1b[0m '
+# sys.ps1='\x1b[33m>>>\x1b[0m '      # dark yellow
+# sys.ps2='\x1b[31m...\x1b[0m '      # dark red
 
 # For easy copy/paste of proper code, use a blank or space:
 #sys.ps1=' '
