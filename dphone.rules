@@ -1,2 +1,2 @@
-ACTION=="add", KERNELS=="usb1", SUBSYSTEM=="usb", ATTR{idVendor}=="0b05", ATTR{idProduct}=="7773", RUN+="/home/akshat/.bash_functions autodphone connect"
-ACTION=="remove", KERNELS=="usb1", SUBSYSTEM=="usb", ENV{BUSNUM}=="001", ENV{PRODUCT}=="b05/7773/404", RUN+="/home/akshat/.bash_functions autodphone disconnect"
+ACTION=="add", KERNELS=="usb1", SUBSYSTEM=="usb", DRIVER=="usb", RUN+="/home/akshat/.bash_functions autodphone usb"
+ACTION=="remove", KERNELS=="usb1", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/home/akshat/.bash_functions autodphone wifi"

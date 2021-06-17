@@ -4,6 +4,7 @@
 display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
 uid=$(id -u "$user")
+password=4739
 
 # notify for root
 notify_send() {
@@ -215,7 +216,7 @@ extract() {
 # 11 11 * * 1-5 export DISPLAY=:0 && /home/$(whoami)/.bash_functions class
 
 # create gnome-extension with this command
-# echo <password> | sudo -S /home/akshat/.bash_functions <function> 2>/dev/null
+# echo <password> | sudo -S /home/"$user"/.bash_functions <function> 2>/dev/null
 class() {
     classDetails='
 
@@ -257,11 +258,11 @@ sql() {
         systemctl start mariadb
     fi
     echo
-    mycli -u akshat -p a
+    mycli -u "$user" -p a
 }
 
 # check if shutdown is scheduled
-shutdownCheck() {
+schk() {
     k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3) / 1000000)))"
     if [ "$(echo "$k" | cut -f4 -d' ')" -ne 1970 ]; then
         echo "$k"
@@ -307,17 +308,17 @@ sphone() {
 
 # mount phone
 mphone() {
-    if [ -z "$(ls /media/akshat/Phone)" ]; then
+    if [ -z "$(ls /media/"$user"/Phone)" ]; then
         if [ -z "$1" ]; then
-            sudo sshfs -o allow_other u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/akshat/Phone -p 8022
+            sudo sshfs -o allow_other u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
-            sudo sshfs -o allow_other u0_a188@"$1":/storage/emulated/0 /media/akshat/Phone -p 8022
+            sudo sshfs -o allow_other u0_a188@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
     fi
-    if [ -z "$(ls /media/akshat/Phone)" ]; then
+    if [ -z "$(ls /media/"$user"/Phone)" ]; then
         echo "Mount Failed"
     else
-        cd /media/akshat/Phone || return
+        cd /media/"$user"/Phone || return
     fi
 }
 
@@ -334,7 +335,6 @@ mphone() {
 dphone() {
     pkill scrcpy
     unlock() {
-        password=4739
         if ! adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
             return
         fi
@@ -449,47 +449,35 @@ dphone() {
 
 # dphone when USB connected
 dphone_usb() {
-    if (($(cat /home/akshat/.adb_in_progress))); then
+    if (($(cat /home/"$user"/.dphone_lock) > 1)); then
         exit
     fi
 
-    echo 1 >/home/akshat/.adb_in_progress
-
-    pkill scrcpy
-
+    acquireLock() {
+        while pgrep -f scrcpy >/dev/null; do
+            pkill scrcpy
+            sleep 1
+        done
+        echo "$1" >/home/"$user"/.dphone_lock
+    }
     waitForUSB() {
-        while ! adb devices -l | grep "\busb\b"; do
-            echo Waiting for USB
+        while ! adb devices -l | grep "\busb\b" >/dev/null; do
             sleep 1
         done
     }
-    export -f waitForUSB
-    unlock() {
-        password=4739
-        if ! adb -d shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000; then
-            return
-        fi
-        if [ "$(adb -d shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
-            adb -d shell input keyevent 26
-        fi
-        adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
-        sleep 1
-    }
-    displayPhone() {
-        unlock
+    displayPhone_usb() {
         parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 213)
         if pgrep -f vscode >/dev/null; then
             parameters+=(--always-on-top)
         fi
-
         (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
-        echo 0 >/home/akshat/.adb_in_progress
-        if ! pgrep -f scrcpy >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+        echo 0 >/home/"$user"/.dphone_lock
+        sleep 1
+        if adb devices -l | grep "\busb\b" >/dev/null && ! pgrep -f scrcpy >/dev/null && ! pgrep -f dphone_wifi >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
         fi
     }
     restartPhoneWifi() {
-        echo Restarting Wifi on Phone
         adb -d shell svc wifi disable
         adb -d shell svc wifi enable
         sleep "${1:-0}"
@@ -497,15 +485,24 @@ dphone_usb() {
     connectLaptopToWifi() {
         if ! curl -s --head --request GET www.google.com | grep "200 OK"; then
             nmcli radio wifi on
-            echo Connecting laptop to wifi
         fi
         while ! curl -s --head --request GET www.google.com | grep "200 OK"; do
             sleep 1
         done
     }
 
+    if adb -d shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000; then
+        acquireLock 1
+        if [ "$(adb -d shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+            adb -d shell input keyevent 26
+        fi
+        adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
+        exit
+    fi
+
+    acquireLock 2
     waitForUSB
-    displayPhone &
+    displayPhone_usb &
     connectLaptopToWifi
 
     if [ "$(adb -d shell settings get global wifi_on)" -eq 0 ]; then
@@ -516,64 +513,74 @@ dphone_usb() {
 
     if adb devices | grep "$phoneIp" >/dev/null && ping -c 1 "$phoneIp" && ! ping -c 1 "$phoneIp" | grep Unreachable >/dev/null; then
         notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
-    else
-        adb tcpip 5555
-        waitForUSB
-        displayPhone &
-        echo Trying to connect
-        adb connect "$phoneIp"
-        for i in {4..7}; do
-            sleep 1
-            if adb devices | grep "$phoneIp" >/dev/null; then
-                break
-            fi
-            echo "Trial $((i - 3))"
-            restartPhoneWifi "$i"
-            adb connect "$phoneIp"
-        done
-        if adb devices | grep "$phoneIp" >/dev/null; then
-            echo -e "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
-            notify_send "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
-        else
-            echo -e "Could not connect"
-            notify-send "Could not connect"
-        fi
+        exit
     fi
+
+    acquireLock 2
+    adb tcpip 5555
+    waitForUSB
+    displayPhone_usb &
+    adb connect "$phoneIp"
+    for i in {4..7}; do
+        sleep 1
+        if adb devices | grep "$phoneIp" >/dev/null; then
+            break
+        fi
+        restartPhoneWifi "$i"
+        adb connect "$phoneIp"
+    done
+    if adb devices | grep "$phoneIp" >/dev/null; then
+        notify_send "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
+    else
+        notify-send "Could not connect"
+    fi
+
 }
 
 # dphone over wifi when USB disconnected
 dphone_wifi() {
-    unlock() {
-        password=4739
+    if (($(cat /home/"$user"/.dphone_lock) > 0)); then
+        exit
+    fi
+
+    echo 1 >/home/"$user"/.dphone_lock
+
+    unlock_wifi() {
         if ! adb -e shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
             return
         fi
         if [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -e shell input keyevent 26
         fi
+        sleep 1
         adb -e shell input keyevent 26 && adb -e shell input keyevent 82 && adb -e shell input text $password && adb -e shell input keyevent 66
         sleep 1
     }
-    displayPhone() {
-        unlock
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214 --max-fps 15 --bit-rate 2M)
+    displayPhone_wifi() {
+        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 213 --max-fps 15 --bit-rate 2M)
         if pgrep -f vscode >/dev/null; then
             parameters+=(--always-on-top)
         fi
+        unlock_wifi
         (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        echo 0 >/home/"$user"/.dphone_lock
+        sleep 1
         if ! pgrep -f scrcpy >/dev/null && [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -e shell input keyevent 26
         fi
     }
-    displayPhone
+    displayPhone_wifi &
 }
 
 # automate dphone using async udev rules
 autodphone() {
-    if [ "$1" = "connect" ]; then
-        echo "/home/akshat/.bash_functions dphone_usb" | at now
-    elif [ "$1" = "disconnect" ]; then
-        echo "/home/akshat/.bash_functions dphone_wifi" | at now
+    if ! [ -f "/home/$user/.dphone_lock" ]; then
+        echo 0 >"/home/$user/.dphone_lock"
+    fi
+    if [ "$1" = "usb" ]; then
+        echo "/bin/bash /home/\"$user\"/.bash_functions dphone_usb" | at now
+    elif [ "$1" = "wifi" ]; then
+        echo "/bin/bash /home/\"$user\"/.bash_functions dphone_wifi" | at now
     fi
 }
 
