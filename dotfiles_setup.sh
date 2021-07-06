@@ -17,20 +17,20 @@ if [[ $1 == "install" ]]; then
 
     # copy dotfiles to /home/$USER
     for df in $(ls -ad .* | grep -Ev '\.\B|.git$|.gitignore|.backup'); do
-        cp -n "${HOME}/${df}" "${PWD}/.backup/${df}"
+        cp -n "${HOME}/${df}" "${PWD}/.backup/${df}" 2>/dev/null
         ln -nfs "${PWD}/${df}" "${HOME}/${df}"
     done
     echo dotfiles updated
 
     # automate dphone
     echo setting autodphone rules
-    cp -n "/etc/udev/rules.d/dphone.rules" "${PWD}/.backup/dphone.rules"
+    cp -n "/etc/udev/rules.d/dphone.rules" "${PWD}/.backup/dphone.rules" 2>/dev/null
     sudo ln -nfs "${PWD}/dphone.rules" "/etc/udev/rules.d/dphone.rules"
     sudo udevadm control --reload-rules
     sudo systemctl restart udev.service
 
     # libinput gestures
-    cp -n "${HOME}/.config/libinput-gestures.conf" "${PWD}/.backup/libinput-gestures.conf"
+    cp -n "${HOME}/.config/libinput-gestures.conf" "${PWD}/.backup/libinput-gestures.conf" 2>/dev/null
     ln -nfs "${PWD}/libinput-gestures.conf" "${HOME}/.config/libinput-gestures.conf"
     echo libinput_gestures updated
 
@@ -39,10 +39,10 @@ if [[ $1 == "install" ]]; then
 elif [[ $1 == "uninstall" ]]; then
     # revert all the changes
     for df in $(ls -ad .* | grep -Ev '\.\B|.git$|.gitignore|.backup'); do
-        cp --remove-destination -f "${PWD}/.backup/${df}" "${HOME}/${df}"
+        cp --remove-destination -f "${PWD}/.backup/${df}" "${HOME}/${df}" 2>/dev/null
     done
-    sudo cp --remove-destination -f "${PWD}/.backup/dphone.rules" "/etc/udev/rules.d/dphone.rules"
-    cp --remove-destination -f "${PWD}/.backup/libinput-gestures.conf" "${HOME}/.config/libinput-gestures.conf"
+    sudo cp --remove-destination -f "${PWD}/.backup/dphone.rules" "/etc/udev/rules.d/dphone.rules" 2>/dev/null
+    cp --remove-destination -f "${PWD}/.backup/libinput-gestures.conf" "${HOME}/.config/libinput-gestures.conf" 2>/dev/null
     echo Changes reverted to original
 else
     echo "Usage: bash dotfiles_setup.sh install"

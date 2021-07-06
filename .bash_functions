@@ -4,6 +4,7 @@
 display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
 uid=$(id -u "$user")
+# password of phone
 password=4739
 
 # notify for root
@@ -125,7 +126,7 @@ deb() {
 # quick C/C++ compile and run
 g() {
     rm temporaryCode 2>/dev/null
-    if [ "${1#*.}" == "cpp" ] || grep 'bits/stdc++.h' -- "$1" >/dev/null; then
+    if [[ ${1#*.} == cpp ]] || grep 'bits/stdc++.h' -- "$1" >/dev/null; then
         g++ -o temporaryCode "$1"
     elif grep -E 'pthread.h|semaphore.h' -- "$1" >/dev/null; then
         gcc -pthread -o temporaryCode "$1"
@@ -141,10 +142,10 @@ g() {
 
 # quick java compile and run
 jv() {
-    if [ "${1#*.}" == "java" ]; then
+    if [[ ${1#*.} == java ]]; then
         javac -verbose "$1" 2> >(grep wrote) | grep -v '\$' | awk '{print substr($2,0,length($2)-1)}'
         #javac $1 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
-    elif [ "${1#*.}" == "class" ]; then
+    elif [[ ${1#*.} == class ]]; then
         java "${1%.*}" "${@:2}" 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
     else
         java "$1" "${@:2}" 2> >(grep -v "^Picked up _JAVA_OPTIONS:" >&2)
@@ -165,7 +166,7 @@ turbo() {
 }
 
 # function Extract for common file formats
-extract() {
+extract_old() {
     SAVEIFS=$IFS
     IFS="$(printf '\n\t')"
     if [ -z "$1" ]; then
@@ -300,9 +301,9 @@ conservationMode() {
 # ssh to phone
 sphone() {
     if [ -z "$1" ]; then
-        ssh -p 8022 u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)"
+        ssh -p 8022 u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)"
     else
-        ssh -p 8022 u0_a188@"$1"
+        ssh -p 8022 u0_a414@"$1"
     fi
 }
 
@@ -310,9 +311,9 @@ sphone() {
 mphone() {
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
         if [ -z "$1" ]; then
-            sudo sshfs -o allow_other u0_a188@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
-            sudo sshfs -o allow_other u0_a188@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other u0_a414@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
     fi
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
@@ -466,11 +467,14 @@ dphone_usb() {
         done
     }
     displayPhone_usb() {
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 213)
+        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
         if pgrep -f vscode >/dev/null; then
             parameters+=(--always-on-top)
         fi
         (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        if (($(cat /home/"$user"/.dphone_lock) > 2)); then
+            exit
+        fi
         echo 0 >/home/"$user"/.dphone_lock
         sleep 1
         if adb devices -l | grep "\busb\b" >/dev/null && ! pgrep -f scrcpy >/dev/null && ! pgrep -f dphone_wifi >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
@@ -516,9 +520,10 @@ dphone_usb() {
         exit
     fi
 
-    acquireLock 2
+    acquireLock 3
     adb tcpip 5555
     waitForUSB
+    acquireLock 2
     displayPhone_usb &
     adb connect "$phoneIp"
     for i in {4..7}; do
@@ -557,7 +562,7 @@ dphone_wifi() {
         sleep 1
     }
     displayPhone_wifi() {
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 213 --max-fps 15 --bit-rate 2M)
+        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
         if pgrep -f vscode >/dev/null; then
             parameters+=(--always-on-top)
         fi
@@ -621,7 +626,18 @@ headphone() {
 
 # toggle audio output device
 switchAudio() {
-    pactl set-default-sink "$(pactl list short sinks | grep -v "$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')\|PulseEffects" | awk '{print $2}')"
+    pactl set-default-sink "$(pactl list short sinks | grep "alsa\|bluez" | grep -v "$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')" | awk '{print $2}')"
+}
+
+# toggle noise torch
+switchMic() {
+    if [ "$(pactl info | grep 'Default Source:' | cut -f3 -d' ')" = "nui_mic_remap" ]; then
+        /home/akshat/.local/bin/noisetorch -u
+        pactl set-default-source "$(pactl list short sources | grep alsa_input | awk '{print $2}')"
+    else
+        /home/akshat/.local/bin/noisetorch -i
+        pactl set-default-source nui_mic_remap
+    fi
 }
 
 # cd with ls
@@ -680,12 +696,29 @@ pulsepreset() {
         if [ "${presets[$i]}" = "$(cat ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"* | grep name | cut -f4 -d\")" ]; then
             pulseeffects -l "${presets[$i + 1]}"
             echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*)"
-            if [ "${presets[$i + 1]}" = "None" ]; then
+            if [[ ${presets[$i + 1]} = Non? ]]; then
                 notify_send "Equalizer Off"
             fi
             return
         fi
     done
+}
+
+# toggle power saving mode
+caffeine() {
+    if [ "$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type)" = "'suspend'" ]; then
+        notify_send "Caffeine ON"
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+    else
+        notify_send "Caffeine OFF"
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'suspend'
+        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+    fi
+}
+
+nf() {
+    notify_send $((($(date +%s) - $(date -d 20210527 +%s)) / 86400))
 }
 
 "$@"
