@@ -10,6 +10,7 @@ fi
 export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:$HOME/.cargo/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
+alias sudo='sudo -v; [ $? ] && sudo'
 
 # Path to your oh-my-zsh installation.
 export ZSH="/home/akshat/.oh-my-zsh"
@@ -129,6 +130,13 @@ fi
 if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
+
+export FZF_DEFAULT_OPTS="--bind='ctrl-o:execute(code {})+abort'"
+
+export QT_DEVICE_PIXEL_RATIO=0
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_SCREEN_SCALE_FACTORS=1
+export QT_SCALE_FACTOR=1
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

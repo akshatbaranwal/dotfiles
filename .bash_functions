@@ -63,7 +63,8 @@ stopwatch() {
 # you'll need terminator and a profile named 'timer'
 timer() {
     Xaxis=$(xrandr --current | grep '\*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
-    terminator --geometry=280x1+$(("$Xaxis" / 2 - 140))+0 -p "timer" -x bash ~/.bash_functions countdown "$1" "$2" "$3" 2>/dev/null &
+    terminator --geometry=280x1+$((Xaxis / 2 - 140))+0 -p "timer" -x bash ~/.bash_functions countdown "$1" "$2" "$3" 2>/dev/null &
+    disown
     exit
 }
 
@@ -219,38 +220,43 @@ extract_old() {
 # create gnome-extension with this command
 # echo <password> | sudo -S /home/"$user"/.bash_functions <function> 2>/dev/null
 class() {
-    classDetails='
+    timeTable='
+     08-09 09-10 10-11 11-12 12-01 01-02 02-03 03-04 04-05 05-06 06-07 07-08
+Mon:  NA    NA    NA    NS    NS    NA    NA    AI    AI    NA    NA    NA
+Tue:  NS    NS    IVP   IVP   NA    NA    NA    GVC   GVC   NA    NA    NA
+Wed:  NA    IML   IML   AI    AI    NA    NA    GVC   GVC   IVP   IVP   NA
+Thu:  NS    NS    NA    NA    NA    NA    NA    IML   IML   IVP   IVP   NA
+Fri:  NA    IML   IML   GVC   GVC   NA    NA    AI    AI    NA    NA    NA'
 
-     9-11 11-1 3-5
-Mon: DAA  PPL  DAA
-Tue: SOE  CN   PPL
-Wed: SOE  DBMS PPL
-Thu: CN   DBMS_TUT SOE
-Fri: DBMS CN   DAA
+    classLinks='
+NS https://meet.google.com/lookup/b7cahky6d5?authuser=1
+AI https://iiita.webex.com/webappng/sites/iiita/dashboard/pmr/rkala?siteurl=iiita
+IML https://meet.google.com/lookup/dvtobeujf6?authuser=1
+GVC https://meet.google.com/lookup/fuxerxtjsp?authuser=1
+IVP https://iiita.webex.com/iiita/j.php?MTID=m8f624f1306f4d70e14be878ea9727171'
 
-PPL https://meet.google.com/lookup/ew55xe2fqk?authuser=1
-SOE https://meet.google.com/lookup/aifyofpkns?authuser=1
-CN https://meet.google.com/lookup/f76m7gdhyh?authuser=1
-DBMS https://iiita.webex.com/iiita/j.php?MTID=mbaa03df1c03de37ee86f93989ae916fc
-DBMS_TUT https://meet.google.com/lookup/hwlsbmorxm?authuser=1
-DAA https://iiita.webex.com/iiita/j.php?MTID=m360c447cfed36debd0295c1d7ccc386e'
-
-    if [ "$(date +%m)" -gt 4 ] || [ "$(date +%m)" -lt 8 ]; then
+    if [ "$(date +%m)" -gt 4 ] && [ "$(date +%m)" -lt 8 ]; then
         notify_send "Summer Holidays!"
     elif [ "$(date +%m)" -eq 12 ]; then
         notify_send "Winter Holidays!"
     elif [ "$(date +%u)" -gt 5 ]; then
         notify_send "Enjoy Your Weekend!"
-    elif [ "$(date +%H)" -gt 16 ] || [ "$(date +%H)" -lt 8 ]; then
+    elif [ "$(date +%H)" -gt 19 ]; then
         notify_send "No More Classes Left!"
+    elif [ "$(date +%H)" -lt 8 ]; then
+        notify_send "Classes yet to start!"
     else
-        echo "$classDetails" | grep -iw "$(echo "$classDetails" | awk -v row="$(($(date +%u) + 3))" -v col="$(date +%H)" 'NR==row {
-                if(col >= 8 && col <= 10) print $2;
-                else if(col >= 11 && col <= 13) print $3;
-                else if(col >= 14 && col <= 16) print $4;
-                }')" | tail -n1 | pee "cut -f1 -d' ' | xargs $HOME/.bash_functions notify_send" "cut -f2 -d' ' | xargs xdg-open"
+        classID="$(echo "$timeTable" | awk -v row="$(($(date +%u) + 2))" -v col="$(($(date +%H) - 6))" 'NR==row {print $col}')"
+        if [ "$classID" = "NA" ]; then
+            notify_send "No Class Right Now"
+        else
+            notify_send "$classID"
+            echo "$classLinks" | grep -iw "$classID" | cut -f2 -d' ' | xargs xdg-open
+        fi
     fi
-    unset classDetails
+    unset classID
+    unset timeTable
+    unset classLinks
 }
 
 # mycli shortcut
@@ -301,7 +307,7 @@ conservationMode() {
 # ssh to phone
 sphone() {
     if [ -z "$1" ]; then
-        ssh -p 8022 u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)"
+        ssh -p 8022 u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1 | head -n1)"
     else
         ssh -p 8022 u0_a414@"$1"
     fi
@@ -311,7 +317,7 @@ sphone() {
 mphone() {
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
         if [ -z "$1" ]; then
-            sudo sshfs -o allow_other u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1 | head -n1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
             sudo sshfs -o allow_other u0_a414@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
@@ -331,7 +337,7 @@ mphone() {
 # disconnect usb
 
 # use this to create a shortcut
-# gnome-terminal --geometry=50x6+1870 -- sh -c "echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 2 tail -f $HOME/nohup.out; done"
+# gnome-terminal --geometry=50x6+1870 -- sh -c 'echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 2 tail -f $HOME/nohup.out; done'
 
 dphone() {
     pkill scrcpy
@@ -419,7 +425,10 @@ dphone() {
     if ! pgrep -f adb >/dev/null; then
         adb start-server 2>/dev/null
     fi
-    if [ "$(adb devices | wc -l)" -eq 2 ] || ([ "$(adb devices | wc -l)" -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
+
+    if [ -f "/home/$user/.dphone_lock" ] && [ "$(cat /home/"$user"/.dphone_lock)" -eq 3 ]; then
+        (displayPhone &)
+    elif [ "$(adb devices | wc -l)" -eq 2 ] || ([ "$(adb devices | wc -l)" -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
         if ! timeout 1 bash -c waitForUSB; then
             echo "Waiting for USB connection..."
         fi
@@ -501,6 +510,7 @@ dphone_usb() {
             adb -d shell input keyevent 26
         fi
         adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
+        sleep 0.5
         exit
     fi
 
@@ -581,11 +591,24 @@ dphone_wifi() {
 autodphone() {
     if ! [ -f "/home/$user/.dphone_lock" ]; then
         echo 0 >"/home/$user/.dphone_lock"
+        chmod 777 "/home/$user/.dphone_lock"
     fi
     if [ "$1" = "usb" ]; then
         echo "/bin/bash /home/\"$user\"/.bash_functions dphone_usb" | at now
     elif [ "$1" = "wifi" ]; then
         echo "/bin/bash /home/\"$user\"/.bash_functions dphone_wifi" | at now
+    fi
+}
+
+# toggle automatic dphone
+dphoneToggle() {
+    if ! [ -f "/home/$user/.dphone_lock" ] || [ "$(cat /home/"$user"/.dphone_lock)" -lt 3 ]; then
+        echo 3 >"/home/$user/.dphone_lock"
+        notify_send "dphone DISABLED"
+        adb kill-server
+    else
+        notify_send "dphone ENABLED"
+        rm -f "/home/$user/.dphone_lock"
     fi
 }
 
@@ -602,7 +625,7 @@ hgrep() {
 # easily change Prompt
 ps1() {
     if [ $# -eq 0 ]; then
-        cat ~/.ps1_default >~/.ps1_current
+        echo '\[\e]0;${PWD/#$HOME/~}\a\]\[\e[1;32m\][\W\[\e[m\e[0;32m\]$(__git_ps1 " (%s)")\[\e[m\e[1;32m\]]> \[\e[m\]' >~/.ps1_current
     else
         echo "\[\e]0;$*: \W\a\]\[\e[1;31m\]$*\[\e[m\]:\[\e[1;34m\]\W\[\e[m\]\$ " >~/.ps1_current
     fi
@@ -676,27 +699,25 @@ opensubl() {
     ls | sort -n | grep -Ev "\.(mp3|mp4|avi|mkv|pdf|zip|html|srt)$" | tail -n+"${1:-0}" | xargs -d "\n" subl
 }
 openvlc() {
-    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 &
-    exit
+    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 &! exit
 }
 
 ipynb() {
-    jupyter notebook "$@" &
-    exit
+    jupyter notebook "$@" &! exit
 }
 
 # cycle through pulseeffects presets
 pulsepreset() {
     if pactl info | grep 'Default Sink:' | grep bluez >/dev/null; then
-        presets=("Non2" "Headphone" "Headphones Bass" "Non2")
+        presets=("None" "Headphone" "Headphones Bass" "None")
     else
         presets=("None" "Surround" "Vocals" "None")
     fi
-    for i in "${!presets[@]}"; do
-        if [ "${presets[$i]}" = "$(cat ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"* | grep name | cut -f4 -d\")" ]; then
+    for ((i = 0; i < ${#presets}; ++i)); do
+        if [[ "${presets[$i]}" == "$(cat ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"* | grep name | cut -f4 -d\")" ]]; then
             pulseeffects -l "${presets[$i + 1]}"
             echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*)"
-            if [[ ${presets[$i + 1]} = Non? ]]; then
+            if [[ ${presets[$i + 1]} == None ]]; then
                 notify_send "Equalizer Off"
             fi
             return
@@ -718,7 +739,18 @@ caffeine() {
 }
 
 nf() {
+    firefox emergency.nofap.com &!
     notify_send $((($(date +%s) - $(date -d 20210527 +%s)) / 86400))
+}
+
+ym() {
+    builtin cd "${2:-~/Music}" || return
+    youtube-dl -f bestaudio -x --audio-format mp3 --embed-thumbnail --add-metadata --xattrs --geo-bypass "$1"
+}
+
+yv() {
+    builtin cd "${2:-~/Videos}" || return
+    youtube-dl -f best --embed-thumbnail --add-metadata --xattrs --geo-bypass --write-auto-sub --embed-sub --ignore-errors "$1"
 }
 
 "$@"
