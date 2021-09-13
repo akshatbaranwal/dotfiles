@@ -1,4 +1,5 @@
 DISABLE_MAGIC_FUNCTIONS="true"
+zmodload zsh/zprof
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
@@ -10,7 +11,6 @@ fi
 export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:$HOME/.cargo/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
-alias sudo='sudo -v; [ $? ] && sudo'
 
 # Path to your oh-my-zsh installation.
 export ZSH="/home/akshat/.oh-my-zsh"
@@ -81,13 +81,15 @@ HIST_STAMPS="mm/dd/yyyy"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
+
+export NVM_LAZY_LOAD=true
+export NVM_COMPLETION=true
 plugins=(
+    \sudo 
+    zsh-nvm
     fd
-    sudo
     extract
     ripgrep
-    torrent
-    web-search
     zsh-completions
     zsh-interactive-cd
     zsh-autosuggestions
@@ -130,6 +132,44 @@ fi
 if [ -f ~/.bash_functions ]; then
     . ~/.bash_functions
 fi
+
+# export NVM_DIR="$HOME/.nvm"
+# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# place this after nvm initialization!
+# autoload -U add-zsh-hook
+# load-nvmrc() {
+#   local node_version="$(nvm version)"
+#   local nvmrc_path="$(nvm_find_nvmrc)"
+# 
+#   if [ -n "$nvmrc_path" ]; then
+#     local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
+# 
+#     if [ "$nvmrc_node_version" = "N/A" ]; then
+#       nvm install
+#     elif [ "$nvmrc_node_version" != "$node_version" ]; then
+#       nvm use
+#     fi
+#   elif [ "$node_version" != "$(nvm version default)" ]; then
+#     echo "Reverting to nvm default version"
+#     nvm use default
+#   fi
+# }
+# add-zsh-hook chpwd load-nvmrc
+# load-nvmrc
+
+# pip zsh completion start
+function _pip_completion {
+  local words cword
+  read -Ac words
+  read -cn cword
+  reply=( $( COMP_WORDS="$words[*]" \
+             COMP_CWORD=$(( cword-1 )) \
+             PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null ))
+}
+compctl -K _pip_completion pip3
+# pip zsh completion end
 
 export FZF_DEFAULT_OPTS="--bind='ctrl-o:execute(code {})+abort'"
 

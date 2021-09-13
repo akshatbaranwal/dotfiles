@@ -28,6 +28,8 @@ Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'mcchrish/nnn.vim'
 call plug#end()
 
+let g:coc_node_path = '/home/akshat/.nvm/versions/node/v16.7.0/bin/node'
+
 " The following are commented out as they cause vim to behave a lot
 " differently from regular Vi. They are highly recommended though.
 set showcmd		 " Show (partial) command in status line.

@@ -4,12 +4,20 @@
 display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
 uid=$(id -u "$user")
+bluetoothMac="40:b0:76:d4:ca:c6"
 # password of phone
 password=4739
 
 # notify for root
 notify_send() {
-    sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus notify-send --hint int:transient:1 "$@"
+    \sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus notify-send --hint int:transient:1 "$@"
+}
+
+kill_notify() {
+    sleep "$1"
+    eval "$(xdotool getmouselocation --shell)"
+    xdotool mousemove 960 80
+    xdotool mousemove "$X" "$Y"
 }
 
 # change rubbish file names of tv series episodes to a more sensible format
@@ -45,8 +53,8 @@ trimFilenames() {
 countdown() {
     date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
-        echo -ne " $(date -u --date @$(("$date1" - $(date +%s))) +%H:%M:%S)\r"
-        sleep 0.2
+        echo -ne " $(date -u --date @$(($date1 - $(date +%s))) +%H:%M:%S)\r"
+        sleep 0.5
     done
     echo
 }
@@ -54,8 +62,8 @@ countdown() {
 stopwatch() {
     date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
-        echo -ne " $(date -u --date @$(($(date +%s) - "$date1" + $1)) +%H:%M:%S)\r"
-        sleep 0.2
+        echo -ne " $(date -u --date @$(($(date +%s) - $date1 + $1)) +%H:%M:%S)\r"
+        sleep 0.5
     done
     echo
 }
@@ -222,18 +230,27 @@ extract_old() {
 class() {
     timeTable='
      08-09 09-10 10-11 11-12 12-01 01-02 02-03 03-04 04-05 05-06 06-07 07-08
-Mon:  NA    NA    NA    NS    NS    NA    NA    AI    AI    NA    NA    NA
-Tue:  NS    NS    IVP   IVP   NA    NA    NA    GVC   GVC   NA    NA    NA
-Wed:  NA    IML   IML   AI    AI    NA    NA    GVC   GVC   IVP   IVP   NA
-Thu:  NS    NS    NA    NA    NA    NA    NA    IML   IML   IVP   IVP   NA
-Fri:  NA    IML   IML   GVC   GVC   NA    NA    AI    AI    NA    NA    NA'
+Mon: NA    NA    NA    NS-L  NS-L  NA    NA    AI-L  AI-L  NA    NA    NA
+Tue: NS-T  NS-T  IVP-L IVP-L NA    NA    NA    GVC-L GVC-L NA    NA    NA
+Wed: NA    IML-L IML-L AI-T  AI-T  NA    NA    GVC-T GVC-T IVP-T IVP-T NA
+Thu: NS-P  NS-P  NA    NA    NA    NA    NA    IML-T IML-T IVP-P IVP-P NA
+Fri: NA    IML-P IML-P GVC-P GVC-P NA    NA    AI-P  AI-P  NA    NA    NA'
 
     classLinks='
 NS https://meet.google.com/lookup/b7cahky6d5?authuser=1
 AI https://iiita.webex.com/webappng/sites/iiita/dashboard/pmr/rkala?siteurl=iiita
 IML https://meet.google.com/lookup/dvtobeujf6?authuser=1
 GVC https://meet.google.com/lookup/fuxerxtjsp?authuser=1
-IVP https://iiita.webex.com/iiita/j.php?MTID=m8f624f1306f4d70e14be878ea9727171'
+IVP https://iiita.webex.com/iiita/j.php?MTID=m8f624f1306f4d70e14be878ea9727171
+GVC-P https://iiita.webex.com/iiita/j.php?MTID=maca12bac5114694e1945941febae8c11
+IVP-T 	https://iiita.webex.com/iiita/j.php?MTID=m1641dac840d65d7a6dd5734214589162'
+
+    classNames='
+NS Network Security 
+AI Artificial Intelligence
+IML Introduction to Machine Learning
+GVC Graphics and Visual Computing
+IVP Image and Video Processing'
 
     if [ "$(date +%m)" -gt 4 ] && [ "$(date +%m)" -lt 8 ]; then
         notify_send "Summer Holidays!"
@@ -246,17 +263,26 @@ IVP https://iiita.webex.com/iiita/j.php?MTID=m8f624f1306f4d70e14be878ea9727171'
     elif [ "$(date +%H)" -lt 8 ]; then
         notify_send "Classes yet to start!"
     else
-        classID="$(echo "$timeTable" | awk -v row="$(($(date +%u) + 2))" -v col="$(($(date +%H) - 6))" 'NR==row {print $col}')"
+        classID="$(echo "$timeTable" | awk -v row="$(echo "$(date +%u) + 2" | bc -l)" -v col="$(echo "$(date +%H) - 6" | bc -l)" 'NR==row {print $col}')"
         if [ "$classID" = "NA" ]; then
             notify_send "No Class Right Now"
         else
-            notify_send "$classID"
-            echo "$classLinks" | grep -iw "$classID" | cut -f2 -d' ' | xargs xdg-open
+            classType="$(echo "$classID" | cut -f2 -d-)"
+            if [ "$classType" = "L" ]; then
+                classType="Lecture"
+            elif [ "$classType" = "T" ]; then
+                classType="Tutorial"
+            elif [ "$classType" = "P" ]; then
+                classType="Practical"
+            fi
+            classLink="$(echo "$classLinks" | grep "\b$classID " | cut -f2 -d' ')"
+            classID="$(echo "$classID" | cut -f1 -d-)"
+            [[ -z "$classLink" ]] && classLink="$(echo "$classLinks" | grep "\b$classID " | cut -f2 -d' ')"
+            className="$(echo "$classNames" | grep "\b$classID " | cut -f2- -d' ')"
+            notify_send "$classID ($className)" "$classType"
+            echo "$classLink" | xargs \sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus xdg-open
         fi
     fi
-    unset classID
-    unset timeTable
-    unset classLinks
 }
 
 # mycli shortcut
@@ -273,7 +299,8 @@ schk() {
     k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3) / 1000000)))"
     if [ "$(echo "$k" | cut -f4 -d' ')" -ne 1970 ]; then
         echo "$k"
-        read -rp "Want to Cancel? [N/y] " k
+        echo -n "Want to Cancel? [N/y] "
+        read -r k
         echo "${k:=n}" >/dev/null
         if [ ${k:0:1} = 'y' ] || [ ${k:0:1} = 'Y' ]; then
             shutdown -c
@@ -307,7 +334,9 @@ conservationMode() {
 # ssh to phone
 sphone() {
     if [ -z "$1" ]; then
-        ssh -p 8022 u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1 | head -n1)"
+        ipAddress="$(ip neigh | grep "$bluetoothMac" | cut -d' ' -f1 | head -n1)"
+        ping -c1 "$ipAddress" >/dev/null 2>&1
+        ssh -p 8022 u0_a414@"$ipAddress"
     else
         ssh -p 8022 u0_a414@"$1"
     fi
@@ -317,7 +346,9 @@ sphone() {
 mphone() {
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
         if [ -z "$1" ]; then
-            sudo sshfs -o allow_other u0_a414@"$(ip neigh | grep "40:b0:76:d4:ca:c6" | cut -d' ' -f1 | head -n1)":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            ipAddress="$(ip neigh | grep "$bluetoothMac" | cut -d' ' -f1 | head -n1)"
+            ping -c1 "$ipAddress" >/dev/null 2>&1
+            sudo sshfs -o allow_other u0_a414@"$ipAddress":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
             sudo sshfs -o allow_other u0_a414@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
@@ -339,6 +370,12 @@ mphone() {
 # use this to create a shortcut
 # gnome-terminal --geometry=50x6+1870 -- sh -c 'echo > $HOME/nohup.out; /usr/bin/nohup $HOME/.bash_functions dphone 2>/dev/null & while ! ps x | grep -v grep | grep scrcpy; do timeout 2 tail -f $HOME/nohup.out; done'
 
+acquireLock() {
+    echo "$1" >/home/"$user"/.dphone_lock
+    pkill scrcpy
+    # sleep 1
+}
+
 dphone() {
     pkill scrcpy
     unlock() {
@@ -349,8 +386,10 @@ dphone() {
         if [ "$(adb -s "$e" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$e" shell input keyevent 26
         fi
+        sleep 1
         adb -s "$e" shell input keyevent 26 && adb -s "$e" shell input keyevent 82 && adb -s "$e" shell input text $password && adb -s "$e" shell input keyevent 66
         sleep 1
+        unlock
     }
     waitForUSB() {
         while ! adb devices -l | grep "\busb\b" >/dev/null; do
@@ -363,14 +402,14 @@ dphone() {
     }
     displayPhone() {
         unlock
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 214)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
         if ! adb devices -l | grep "\busb\b" >/dev/null; then
-            parameters+=(--max-fps 15 --bit-rate 2M)
+            params+=(--max-fps 15 --bit-rate 2M)
         fi
         if pgrep -f vscode >/dev/null; then
-            parameters+=(--always-on-top)
+            params+=(--always-on-top)
         fi
-        (scrcpy "${parameters[@]}" >/dev/null 2>&1)
+        (scrcpy "${params[@]}" >/dev/null 2>&1)
         sleep 1
         if ! pgrep -f scrcpy >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
@@ -419,7 +458,7 @@ dphone() {
             notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
         else
             echo -e "Could not connect"
-            notify-send "Could not connect"
+            # notify-send "Could not connect"
         fi
     }
     if ! pgrep -f adb >/dev/null; then
@@ -460,42 +499,56 @@ dphone() {
 # dphone when USB connected
 dphone_usb() {
     if (($(cat /home/"$user"/.dphone_lock) > 1)); then
-        exit
+        return
     fi
+    # echo >>"/home/akshat/.dphone_debug"
+    # echo dphone_usb >>"/home/akshat/.dphone_debug"
 
-    acquireLock() {
-        while pgrep -f scrcpy >/dev/null; do
-            pkill scrcpy
-            sleep 1
-        done
-        echo "$1" >/home/"$user"/.dphone_lock
+    unlock_usb() {
+        sleep 0.5
+        if adb -d shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
+            # echo unlock_usb >>"/home/akshat/.dphone_debug"
+            acquireLock 1
+            if [ "$(adb -d shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
+                sleep 0.5
+                adb -d shell input keyevent 26
+            fi
+            sleep 0.5
+            adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
+            sleep 0.5
+            exit
+        fi
     }
     waitForUSB() {
+        echo waitForUSB >>"/home/akshat/.dphone_debug"
         while ! adb devices -l | grep "\busb\b" >/dev/null; do
             sleep 1
         done
     }
     displayPhone_usb() {
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
+        # echo displayPhone_usb >>"/home/akshat/.dphone_debug"
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
         if pgrep -f vscode >/dev/null; then
-            parameters+=(--always-on-top)
+            params+=(--always-on-top)
         fi
-        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${params[@]}")
         if (($(cat /home/"$user"/.dphone_lock) > 2)); then
             exit
         fi
         echo 0 >/home/"$user"/.dphone_lock
-        sleep 1
+        # sleep 1
         if adb devices -l | grep "\busb\b" >/dev/null && ! pgrep -f scrcpy >/dev/null && ! pgrep -f dphone_wifi >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
         fi
     }
     restartPhoneWifi() {
+        echo restartPhoneWifi >>"/home/akshat/.dphone_debug"
         adb -d shell svc wifi disable
         adb -d shell svc wifi enable
         sleep "${1:-0}"
     }
     connectLaptopToWifi() {
+        echo connectLaptopToWifi >>"/home/akshat/.dphone_debug"
         if ! curl -s --head --request GET www.google.com | grep "200 OK"; then
             nmcli radio wifi on
         fi
@@ -504,15 +557,7 @@ dphone_usb() {
         done
     }
 
-    if adb -d shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000; then
-        acquireLock 1
-        if [ "$(adb -d shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
-            adb -d shell input keyevent 26
-        fi
-        adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text $password && adb -d shell input keyevent 66
-        sleep 0.5
-        exit
-    fi
+    unlock_usb
 
     acquireLock 2
     waitForUSB
@@ -526,6 +571,7 @@ dphone_usb() {
     phoneIp="$(adb -d shell ip route | grep wlan0 | awk '{print $9}')"
 
     if adb devices | grep "$phoneIp" >/dev/null && ping -c 1 "$phoneIp" && ! ping -c 1 "$phoneIp" | grep Unreachable >/dev/null; then
+        # echo wifi_connected_already >>"/home/akshat/.dphone_debug"
         notify_send "Wireless connected: $(adb devices -l | tail -n2 | head -n1 | cut -f4 -d: | awk '{print $1}')"
         exit
     fi
@@ -545,6 +591,7 @@ dphone_usb() {
         adb connect "$phoneIp"
     done
     if adb devices | grep "$phoneIp" >/dev/null; then
+        # echo wifi_connected_now >>"/home/akshat/.dphone_debug"
         notify_send "Wireless connected: $(adb devices -l | head -n2 | tail -n1 | cut -f4 -d: | awk '{print $1}')"
     else
         notify-send "Could not connect"
@@ -555,36 +602,46 @@ dphone_usb() {
 # dphone over wifi when USB disconnected
 dphone_wifi() {
     if (($(cat /home/"$user"/.dphone_lock) > 0)); then
-        exit
+        return
     fi
-
-    echo 1 >/home/"$user"/.dphone_lock
+    # echo >>"/home/akshat/.dphone_debug"
+    # echo dphone_wifi >>"/home/akshat/.dphone_debug"
 
     unlock_wifi() {
         if ! adb -e shell dumpsys power | grep mUserActivityTimeoutOverrideFromWindowManager=10000 >/dev/null; then
             return
         fi
+        # echo unlock_wifi >>"/home/akshat/.dphone_debug"
         if [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -e shell input keyevent 26
         fi
-        sleep 1
+        # sleep 1
         adb -e shell input keyevent 26 && adb -e shell input keyevent 82 && adb -e shell input text $password && adb -e shell input keyevent 66
         sleep 1
+        unlock_wifi
     }
     displayPhone_wifi() {
-        parameters=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
+        # echo displayPhone_wifi >>"/home/akshat/.dphone_debug"
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
         if pgrep -f vscode >/dev/null; then
-            parameters+=(--always-on-top)
+            params+=(--always-on-top)
         fi
         unlock_wifi
-        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${parameters[@]}")
+        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${params[@]}")
+        if (($(cat /home/"$user"/.dphone_lock) > 1)); then
+            exit
+        fi
         echo 0 >/home/"$user"/.dphone_lock
-        sleep 1
+        # sleep 1
         if ! pgrep -f scrcpy >/dev/null && [ "$(adb -e shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -e shell input keyevent 26
         fi
     }
-    displayPhone_wifi &
+
+    if adb devices 2>/dev/null | grep 5555 >/dev/null; then
+        echo 1 >/home/"$user"/.dphone_lock
+        displayPhone_wifi &
+    fi
 }
 
 # automate dphone using async udev rules
@@ -593,22 +650,35 @@ autodphone() {
         echo 0 >"/home/$user/.dphone_lock"
         chmod 777 "/home/$user/.dphone_lock"
     fi
+    if (($(cat /home/"$user"/.dphone_lock) == 3 )); then
+        return
+    fi
     if [ "$1" = "usb" ]; then
         echo "/bin/bash /home/\"$user\"/.bash_functions dphone_usb" | at now
     elif [ "$1" = "wifi" ]; then
+        sleep 0.5
         echo "/bin/bash /home/\"$user\"/.bash_functions dphone_wifi" | at now
     fi
 }
 
 # toggle automatic dphone
 dphoneToggle() {
-    if ! [ -f "/home/$user/.dphone_lock" ] || [ "$(cat /home/"$user"/.dphone_lock)" -lt 3 ]; then
+    if ! [ -f "/home/$user/.dphone_lock" ]; then
+        echo 0 >"/home/$user/.dphone_lock"
+        chmod 777 "/home/$user/.dphone_lock"
+    fi
+    if [ "$(cat /home/"$user"/.dphone_lock)" -lt 3 ]; then
         echo 3 >"/home/$user/.dphone_lock"
-        notify_send "dphone DISABLED"
-        adb kill-server
+        notify_send "autodphone DISABLED"
+        pkill scrcpy
     else
-        notify_send "dphone ENABLED"
-        rm -f "/home/$user/.dphone_lock"
+        echo 0 >"/home/$user/.dphone_lock"
+        notify_send "autodphone ENABLED"
+        if adb devices -l | grep "\busb\b" >/dev/null; then
+            dphone_usb
+        else
+            dphone_wifi
+        fi
     fi
 }
 
@@ -699,24 +769,30 @@ opensubl() {
     ls | sort -n | grep -Ev "\.(mp3|mp4|avi|mkv|pdf|zip|html|srt)$" | tail -n+"${1:-0}" | xargs -d "\n" subl
 }
 openvlc() {
-    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 &! exit
+    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | xargs -d "\n" vlc 1>/dev/null 2>&1 &
+    disown
+    exit
 }
 
 ipynb() {
-    jupyter notebook "$@" &! exit
+    jupyter notebook "$@" &
+    disown
+    exit
 }
 
 # cycle through pulseeffects presets
 pulsepreset() {
     if pactl info | grep 'Default Sink:' | grep bluez >/dev/null; then
+        fpath=~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')":headset-output.json
         presets=("None" "Headphone" "Headphones Bass" "None")
     else
+        fpath=~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')":analog-output-speaker.json
         presets=("None" "Surround" "Vocals" "None")
     fi
     for ((i = 0; i < ${#presets}; ++i)); do
-        if [[ "${presets[$i]}" == "$(cat ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"* | grep name | cut -f4 -d\")" ]]; then
+        if [[ "${presets[$i]}" == "$(cat $fpath | grep name | cut -f4 -d\")" ]]; then
             pulseeffects -l "${presets[$i + 1]}"
-            echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*)"
+            echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*speaker*)"
             if [[ ${presets[$i + 1]} == None ]]; then
                 notify_send "Equalizer Off"
             fi
@@ -738,19 +814,21 @@ caffeine() {
     fi
 }
 
-nf() {
-    firefox emergency.nofap.com &!
-    notify_send $((($(date +%s) - $(date -d 20210527 +%s)) / 86400))
-}
-
+# download youtube music
 ym() {
-    builtin cd "${2:-~/Music}" || return
+    builtin cd ${2:-~/Music} || return
     youtube-dl -f bestaudio -x --audio-format mp3 --embed-thumbnail --add-metadata --xattrs --geo-bypass "$1"
 }
 
+# download youtube video
 yv() {
-    builtin cd "${2:-~/Videos}" || return
+    builtin cd ${2:-~/Videos} || return
     youtube-dl -f best --embed-thumbnail --add-metadata --xattrs --geo-bypass --write-auto-sub --embed-sub --ignore-errors "$1"
+}
+
+timezsh() {
+  shell=${1-$SHELL}
+  for i in $(seq 1 10); do /usr/bin/time $shell -i -c exit; done
 }
 
 "$@"
