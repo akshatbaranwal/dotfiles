@@ -11,3 +11,5 @@ git clone https://github.com/AkshatBaranwal/dotfiles.git
 cd dotfiles
 sh dotfiles_setup.sh
 ```
+
+happy coding..
