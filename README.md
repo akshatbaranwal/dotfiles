@@ -18,3 +18,5 @@ bash dotfiles_setup.sh install
 ```
 bash dotfiles_setup.sh uninstall
 ```
+
+happy coding..
