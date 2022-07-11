@@ -4,7 +4,8 @@
 display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
 uid=$(id -u "$user")
-bluetoothMac="40:b0:76:d4:ca:c6"
+phoneMac="30:4b:07:69:63:12"
+bluetoothMac="00:1B:66:C8:13:C3"
 # password of phone
 password=4739
 
@@ -14,7 +15,7 @@ notify_send() {
 }
 
 kill_notify() {
-    sleep "$1"
+    sleep "${1:-0}"
     eval "$(xdotool getmouselocation --shell)"
     xdotool mousemove 960 80
     xdotool mousemove "$X" "$Y"
@@ -23,9 +24,9 @@ kill_notify() {
 # change rubbish file names of tv series episodes to a more sensible format
 trimFilenames() {
     if [ -z "$1" ]; then
-        files=$(ls -- *.{mp3,mp4,mkv,avi} 2>/dev/null)
+        files=$(ls -d -- * 2>/dev/null)
     else
-        files=$(ls -- *."$1" 2>/dev/null)
+        files=$(ls -d -- *."$1" 2>/dev/null)
     fi
     prefix=$(echo "$files" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D')
     suffix=$(echo "$files" | rev | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D' | rev)
@@ -37,24 +38,30 @@ trimFilenames() {
     echo Common Prefix: "$prefix"
     echo Common Suffix: "${suffix%.*}"
     echo
-    if [[ "$prefix" = "$suffix" ]] || [[ "$prefix.$ext" = "$suffix" ]] || [[ $suffix != *.$ext ]]; then
+    if [[ "$prefix" = "$suffix" ]] || [[ $suffix != *.$ext ]] || [[ $prefix.$ext = "$suffix" ]] && [ -n "$1" ]; then
         echo "No change done"
         return
     fi
-    SAVEIFS=$IFS
-    IFS=$'\n'
-    for f in $files; do
-        mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix}))).$ext"
-        mv -iv -- "${f%.*}.srt" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix} + 1)))srt" 2>/dev/null
-    done
-    IFS=$SAVEIFS
+    local IFS=$'\n'
+    if [ "$ZSH_VERSION" ]; then
+        setopt sh_word_split
+    fi
+    if [ -z "$1" ]; then
+        for f in $files; do
+            mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix})))"
+        done
+    else
+        for f in $files; do
+            mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix}))).$ext"
+        done
+    fi
 }
 
 countdown() {
     date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
         echo -ne " $(date -u --date @$(($date1 - $(date +%s))) +%H:%M:%S)\r"
-        sleep 0.5
+        sleep 1
     done
     echo
 }
@@ -63,7 +70,7 @@ stopwatch() {
     date1=$(($(date +%s) + $1 + 60 * ${2:-0} + 3600 * ${3:-0}))
     while [ "$date1" -ge "$(date +%s)" ]; do
         echo -ne " $(date -u --date @$(($(date +%s) - $date1 + $1)) +%H:%M:%S)\r"
-        sleep 0.5
+        sleep 1
     done
     echo
 }
@@ -228,35 +235,34 @@ extract_old() {
 # create gnome-extension with this command
 # echo <password> | sudo -S /home/"$user"/.bash_functions <function> 2>/dev/null
 class() {
-    timeTable='
+    emailId="iit2019010@iiita.ac.in"
+
+    timeTable="
      08-09 09-10 10-11 11-12 12-01 01-02 02-03 03-04 04-05 05-06 06-07 07-08
-Mon: NA    NA    NA    NS-L  NS-L  NA    NA    AI-L  AI-L  NA    NA    NA
-Tue: NS-T  NS-T  IVP-L IVP-L NA    NA    NA    GVC-L GVC-L NA    NA    NA
-Wed: NA    IML-L IML-L AI-T  AI-T  NA    NA    GVC-T GVC-T IVP-T IVP-T NA
-Thu: NS-P  NS-P  NA    NA    NA    NA    NA    IML-T IML-T IVP-P IVP-P NA
-Fri: NA    IML-P IML-P GVC-P GVC-P NA    NA    AI-P  AI-P  NA    NA    NA'
+Mon: NA    NA    NA    RSG-L RSG-L NA    NA    ENB-T ENB-T BCC-L BCC-L NA
+Tue: NA    NA    NA    RSG-T RSG-T NA    NA    ENB-L ENB-L BCC-T BCC-T NA
+Wed: NA    DMW-L DMW-L NA    NA    NA    NA    ENB-P ENB-P BCC-P BCC-P NA
+Thu: NA    DMW-P DMW-P RSG-P RSG-P NA    NA    NA    NA    DMW-T DMW-T NA"
 
-    classLinks='
-NS https://meet.google.com/lookup/b7cahky6d5?authuser=1
-AI https://iiita.webex.com/webappng/sites/iiita/dashboard/pmr/rkala?siteurl=iiita
-IML https://meet.google.com/lookup/dvtobeujf6?authuser=1
-GVC https://meet.google.com/lookup/fuxerxtjsp?authuser=1
-IVP https://iiita.webex.com/iiita/j.php?MTID=m8f624f1306f4d70e14be878ea9727171
-GVC-P https://iiita.webex.com/iiita/j.php?MTID=maca12bac5114694e1945941febae8c11
-IVP-T 	https://iiita.webex.com/iiita/j.php?MTID=m1641dac840d65d7a6dd5734214589162'
+    classLinks="
+RSG https://meet.google.com/biz-xnsg-sai?authuser=$emailId
+ENB https://meet.google.com/ufi-asyn-uxa?authuser=$emailId
+BCC https://meet.google.com/zks-bsws-uoi?authuser=$emailId
+DMW-P https://meet.google.com/nox-neer-fkk?authuser=$emailId
+DMW-T https://meet.google.com/nox-neer-fkk?authuser=$emailId
+DMW-L https://iiita.webex.com/iiita/j.php?MTID=m3ab2097c9782d8544b07c8ab6276b2ea"
 
-    classNames='
-NS Network Security 
-AI Artificial Intelligence
-IML Introduction to Machine Learning
-GVC Graphics and Visual Computing
-IVP Image and Video Processing'
+    classNames="
+RSG Remote Sensing and GIS
+ENB Engineering Biology
+BCC Blockchain and Cryptocurrencies
+DMW Data Mining and Warehousing"
 
     if [ "$(date +%m)" -gt 4 ] && [ "$(date +%m)" -lt 8 ]; then
         notify_send "Summer Holidays!"
     elif [ "$(date +%m)" -eq 12 ]; then
         notify_send "Winter Holidays!"
-    elif [ "$(date +%u)" -gt 5 ]; then
+    elif [ "$(date +%u)" -gt 4 ]; then
         notify_send "Enjoy Your Weekend!"
     elif [ "$(date +%H)" -gt 19 ]; then
         notify_send "No More Classes Left!"
@@ -297,7 +303,7 @@ sql() {
 # check if shutdown is scheduled
 schk() {
     k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3) / 1000000)))"
-    if [ "$(echo "$k" | cut -f4 -d' ')" -ne 1970 ]; then
+    if ! [ "$(echo "$k" | awk '{print $7}')" = "1970" ]; then
         echo "$k"
         echo -n "Want to Cancel? [N/y] "
         read -r k
@@ -321,8 +327,13 @@ byee() {
 
 # battery conservation mode toggle
 conservationMode() {
+    \sudo -v
     cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/ >/dev/null || return
-    echo $((1 - $(cat conservation_mode))) | sudo tee conservation_mode >/dev/null
+    if [ -z "$1" ]; then
+        echo $((1 - $(cat conservation_mode))) | sudo tee conservation_mode >/dev/null
+    else
+        echo "$1" | sudo tee conservation_mode >/dev/null
+    fi
     if [ "$(cat conservation_mode)" -eq 1 ]; then
         notify_send "Conservation Mode ON"
     else
@@ -334,11 +345,11 @@ conservationMode() {
 # ssh to phone
 sphone() {
     if [ -z "$1" ]; then
-        ipAddress="$(ip neigh | grep "$bluetoothMac" | cut -d' ' -f1 | head -n1)"
+        ipAddress="$(ip neigh | grep "$phoneMac" | cut -d' ' -f1 | head -n1)"
         ping -c1 "$ipAddress" >/dev/null 2>&1
-        ssh -p 8022 u0_a414@"$ipAddress"
+        ssh -xp 8022 u0_a210@"$ipAddress"
     else
-        ssh -p 8022 u0_a414@"$1"
+        ssh -xp 8022 u0_a210@"$1"
     fi
 }
 
@@ -346,11 +357,11 @@ sphone() {
 mphone() {
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
         if [ -z "$1" ]; then
-            ipAddress="$(ip neigh | grep "$bluetoothMac" | cut -d' ' -f1 | head -n1)"
+            ipAddress="$(ip neigh | grep "$phoneMac" | cut -d' ' -f1 | head -n1)"
             ping -c1 "$ipAddress" >/dev/null 2>&1
-            sudo sshfs -o allow_other u0_a414@"$ipAddress":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other u0_a210@"$ipAddress":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
-            sudo sshfs -o allow_other u0_a414@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other u0_a210@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
     fi
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
@@ -402,14 +413,14 @@ dphone() {
     }
     displayPhone() {
         unlock
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
-        if ! adb devices -l | grep "\busb\b" >/dev/null; then
-            params+=(--max-fps 15 --bit-rate 2M)
-        fi
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" $1 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 218)
+        # if ! adb devices -l | grep "\busb\b" >/dev/null; then
+        #     params+=(--max-fps 15 --bit-rate 2M)
+        # fi
         if pgrep -f vscode >/dev/null; then
             params+=(--always-on-top)
         fi
-        (scrcpy "${params[@]}" >/dev/null 2>&1)
+        (sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus scrcpy "${params[@]}" >/dev/null 2>&1)
         sleep 1
         if ! pgrep -f scrcpy >/dev/null && [ "$(adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell dumpsys power | grep mWakefulness= | cut -f2 -d=)" = 'Awake' ]; then
             adb -s "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" shell input keyevent 26
@@ -466,7 +477,7 @@ dphone() {
     fi
 
     if [ -f "/home/$user/.dphone_lock" ] && [ "$(cat /home/"$user"/.dphone_lock)" -eq 3 ]; then
-        (displayPhone &)
+        (displayPhone $1 &)
     elif [ "$(adb devices | wc -l)" -eq 2 ] || ([ "$(adb devices | wc -l)" -eq 3 ] && (adb devices | grep offline >/dev/null || adb devices -l | grep "\busb\b" >/dev/null || (echo "Trying to reach network" && pingPhone))); then
         if ! timeout 1 bash -c waitForUSB; then
             echo "Waiting for USB connection..."
@@ -520,14 +531,14 @@ dphone_usb() {
         fi
     }
     waitForUSB() {
-        echo waitForUSB >>"/home/akshat/.dphone_debug"
+        # echo waitForUSB >>"/home/akshat/.dphone_debug"
         while ! adb devices -l | grep "\busb\b" >/dev/null; do
             sleep 1
         done
     }
     displayPhone_usb() {
         # echo displayPhone_usb >>"/home/akshat/.dphone_debug"
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223)
         if pgrep -f vscode >/dev/null; then
             params+=(--always-on-top)
         fi
@@ -542,13 +553,13 @@ dphone_usb() {
         fi
     }
     restartPhoneWifi() {
-        echo restartPhoneWifi >>"/home/akshat/.dphone_debug"
+        # echo restartPhoneWifi >>"/home/akshat/.dphone_debug"
         adb -d shell svc wifi disable
         adb -d shell svc wifi enable
         sleep "${1:-0}"
     }
     connectLaptopToWifi() {
-        echo connectLaptopToWifi >>"/home/akshat/.dphone_debug"
+        # echo connectLaptopToWifi >>"/home/akshat/.dphone_debug"
         if ! curl -s --head --request GET www.google.com | grep "200 OK"; then
             nmcli radio wifi on
         fi
@@ -622,7 +633,7 @@ dphone_wifi() {
     }
     displayPhone_wifi() {
         # echo displayPhone_wifi >>"/home/akshat/.dphone_debug"
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation 0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
         if pgrep -f vscode >/dev/null; then
             params+=(--always-on-top)
         fi
@@ -650,7 +661,7 @@ autodphone() {
         echo 0 >"/home/$user/.dphone_lock"
         chmod 777 "/home/$user/.dphone_lock"
     fi
-    if (($(cat /home/"$user"/.dphone_lock) == 3 )); then
+    if (($(cat /home/"$user"/.dphone_lock) == 3)); then
         return
     fi
     if [ "$1" = "usb" ]; then
@@ -711,9 +722,9 @@ headphone() {
         pacmd list-cards | grep -B1 bluez_card | grep index | awk '{print $2}'
     }
     if pacmd list-cards | grep bluez_card >/dev/null; then
-        pacmd set-card-profile "$(index)" "$(echo -e "a2dp_sink\nheadset_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")"
+        pacmd set-card-profile "$(index)" "$(echo -e "a2dp_sink\nhandsfree_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")"
     else
-        bluetoothctl connect 00:16:94:44:A1:EC
+        bluetoothctl connect $bluetoothMac
     fi
 }
 
@@ -747,7 +758,11 @@ cb() {
 }
 
 # open multiple files
-open() {
+o() {
+    if [ $# -eq 0 ]; then
+		xdg-open .
+        return
+	fi
     for file in "$@"; do
         find . -maxdepth 1 -iname "$file" -print0 | xargs -0 -n1 xdg-open >/dev/null 2>&1
     done
@@ -792,10 +807,10 @@ pulsepreset() {
     for ((i = 0; i < ${#presets}; ++i)); do
         if [[ "${presets[$i]}" == "$(cat $fpath | grep name | cut -f4 -d\")" ]]; then
             pulseeffects -l "${presets[$i + 1]}"
-            echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$(ls ~/.config/PulseEffects/autoload/"$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')"*speaker*)"
-            if [[ ${presets[$i + 1]} == None ]]; then
-                notify_send "Equalizer Off"
-            fi
+            echo -e "{\n    \"name\": \"${presets[$i + 1]}\"\n}" >"$fpath"
+            # if [[ ${presets[$i + 1]} == None ]]; then
+            #     notify_send "Equalizer Off"
+            # fi
             return
         fi
     done
@@ -803,14 +818,26 @@ pulsepreset() {
 
 # toggle power saving mode
 caffeine() {
-    if [ "$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type)" = "'suspend'" ]; then
-        notify_send "Caffeine ON"
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+    if ! [ -z "$1" ]; then
+        if [ $1 -eq 0 ]; then
+            notify_send "Caffeine OFF"
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'suspend'
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+        else
+            notify_send "Caffeine ON"
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+        fi
     else
-        notify_send "Caffeine OFF"
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'suspend'
-        gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+        if [ "$(gsettings get org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type)" = "'suspend'" ]; then
+            notify_send "Caffeine ON"
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+        else
+            notify_send "Caffeine OFF"
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'suspend'
+            gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'
+        fi
     fi
 }
 
@@ -827,8 +854,109 @@ yv() {
 }
 
 timezsh() {
-  shell=${1-$SHELL}
-  for i in $(seq 1 10); do /usr/bin/time $shell -i -c exit; done
+    shell=${1-$SHELL}
+    for i in $(seq 1 10); do /usr/bin/time "$shell" -i -c exit; done
+}
+
+gc() {
+    repo="$(xclip -o -sel clip)"
+    git clone "$repo" && cd "$(basename "$repo" .git)" || return
+}
+
+countLines() {
+    find . -name "*.$1" | sed 's/.*/"&"/' | xargs  wc -l | sort -n
+}
+
+nf() {
+    notify_send "$((($(date +%s) - $(date -d 20220624 +%s)) / 86400)) Day Streak!" "100 HOUR WORK WEEK"
+    x=$(($(cat ~/.devOpsProgress)+1))
+    echo $x > ~/.devOpsProgress
+    cd /media/akshat/Data/Documents/COURSES/DevOps/DevOps\ Bootcamp
+    y=$(xdotool get_desktop)
+    xdotool set_desktop $(($(xdotool get_num_desktops)-1))
+    vlc --fullscreen --rate 1.4 --play-and-exit "$x.mp4" && xdotool set_desktop $y
+}
+
+productivity() {
+    cd /home/$user/dotfiles/.productivity
+    state=$(cat state)
+    seconds=$(cat seconds)
+    epoch0=$(cat epoch)
+    epoch1=$(date +%s)
+    progress=$((($epoch1 - $epoch0) * $state))
+    state=$((1-$(cat state)))
+    if [[ "$(date -d @$epoch0 | cut -f1-4 -d' ')" != "$(date -d @$epoch1 | cut -f1-4 -d' ')" ]]; then
+        seconds=0
+    fi
+    seconds=$(($seconds + $progress))
+    if [[ $state == 0 ]]; then
+        notify_send "BREAK TIME" "Last session: $(date -d@$progress -u +%H) hours $(date -d@$progress -u +%M) minutes"
+    else
+        notify_send "WORK STARTED" "Total Work: $(date -d@$seconds -u +%H) hours $(date -d@$seconds -u +%M) minutes"
+    fi
+    echo $state > state
+    echo $seconds > seconds
+    echo $epoch1 > epoch
+    cd ~-
+}
+
+fix-home-dir() {
+    echo "    # This file is written by xdg-user-dirs-update
+    # If you want to change or add directories, just edit the line you're
+    # interested in. All local changes will be retained on the next run.
+    # Format is XDG_xxx_DIR=\"$HOME/yyy\", where yyy is a shell-escaped
+    # homedir-relative path, or XDG_xxx_DIR="/yyy", where /yyy is an
+    # absolute path. No other format is supported.
+    # 
+    XDG_DESKTOP_DIR=\"$HOME/Desktop\"
+    XDG_DOWNLOAD_DIR=\"$HOME/Downloads\"
+    XDG_TEMPLATES_DIR=\"$HOME/Templates\"
+    XDG_PUBLICSHARE_DIR=\"$HOME/Public\"
+    XDG_DOCUMENTS_DIR=\"$HOME/Documents\"
+    XDG_MUSIC_DIR=\"$HOME/Music\"
+    XDG_PICTURES_DIR=\"$HOME/Pictures\"
+    XDG_VIDEOS_DIR=\"$HOME/Videos\"
+    " > .config/user-dirs.dirs
+    xdg-user-dirs-update
+}
+
+bluelight() {
+    redshift -x
+    sleep 0.2
+    redshift -P -O ${1:-6000}
+}
+
+# Determine size of a file or total size of a directory
+fs() {
+	if du -b /dev/null > /dev/null 2>&1; then
+		local arg=-sbh
+	else
+		local arg=-sh
+	fi
+	if [[ -n "$@" ]]; then
+		\du $arg -- "$@"
+	else
+		\du $arg .[^.]* ./*
+	fi
+}
+
+mkd() {
+	mkdir -p "$@" && cd "$_";
+}
+
+clipscreenshot() {
+    TMPFILE=`mktemp -u /tmp/screenshotclip.XXXXXXXX.png`
+    gnome-screenshot "$@" -f $TMPFILE && xclip $TMPFILE -selection clipboard -target image/png
+    rm $TMPFILE || echo ""
+}
+
+unlock_medium() {
+    twurl -u "baranwal_akshat" -A "Content-type: application/json" -X POST /1.1/direct_messages/events/new.json -d "{\"event\": {\"type\": \"message_create\", \"message_create\": {\"target\": {\"recipient_id\": \"741487052236021761\"}, \"message_data\": {\"text\": \"$(xclip -o -sel clip)\"}}}}" | jq '.event.message_create.message_data.text' | xargs firefox
+}
+
+neigh() {
+    sudo timeout 1s arping "$(ip neigh | awk '{print $1}' | grep -P "^\d{3}\.\d{3}\.\d{2,3}\.1$")" >/dev/null 2>&1
+    ip neigh
 }
 
 "$@"

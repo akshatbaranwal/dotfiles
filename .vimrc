@@ -28,7 +28,7 @@ Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'mcchrish/nnn.vim'
 call plug#end()
 
-let g:coc_node_path = '/home/akshat/.nvm/versions/node/v16.7.0/bin/node'
+let g:coc_node_path = '/home/akshat/.nvm/versions/node/v17.1.0/bin/node'
 
 " The following are commented out as they cause vim to behave a lot
 " differently from regular Vi. They are highly recommended though.
@@ -316,7 +316,7 @@ if has("autocmd")
 endif
 
 let g:onedark_color_overrides = {
-\ "black": {"gui": "#0a0b0c", "cterm": "235", "cterm16": "0" },
+\ "background": {"gui": "#0a0b0c", "cterm": "235", "cterm16": "0" },
 \ "white": {"gui": "#e1e4eb", "cterm": "235", "cterm16": "0" },
 \ "purple": { "gui": "#e99eff", "cterm": "235", "cterm16": "0" },
 \ "comment_grey": { "gui": "#88909e", "cterm": "235", "cterm16": "0" },

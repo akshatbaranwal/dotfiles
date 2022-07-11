@@ -1,0 +1,15 @@
+#! /bin/bash
+
+notify_send () {
+	sudo -u akshat DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus notify-send --hint int:transient:1 "$@"
+}
+
+cd /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/ > /dev/null || return
+echo $((1 - $(cat conservation_mode))) | sudo tee conservation_mode > /dev/null
+if [ "$(cat conservation_mode)" -eq 1 ]
+then
+	notify_send "Conservation Mode ON"
+else
+	notify_send "Conservation Mode OFF"
+fi
+cd ~- > /dev/null || return

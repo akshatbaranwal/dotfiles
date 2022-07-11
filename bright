@@ -1,0 +1,26 @@
+#! /bin/bash
+cd /sys/class/backlight/intel_backlight
+brightness=$(cat brightness) 
+case $# in
+	(1) brightness=$((685 * $1))  ;;
+	(2) if [ "$1" = '--change' ]
+		then
+			brightness=$((brightness + $2 * 685)) 
+		else
+			echo "Usage: bright [--change] brightness_percent"
+			cd ~-
+			exit 1
+		fi ;;
+	(*) echo "Usage: bright [--change] brightness_percent"
+		cd ~-
+        exit 1 ;;
+esac
+if [ $brightness -lt 0 ]
+then
+	brightness=0 
+elif [ $brightness -gt "$(cat max_brightness)" ]
+then
+	brightness=$(cat max_brightness) 
+fi
+echo "$brightness" | sudo tee brightness > /dev/null
+cd ~-

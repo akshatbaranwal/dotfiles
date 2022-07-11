@@ -8,7 +8,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-export PATH="$HOME/.local/bin:/root/.local/bin:/bin/lscript:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/akshat:$HOME/bin:$HOME/.deno/bin:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:$HOME/.cargo/bin"
+export PATH="$HOME/.local/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:/home/akshat/Android/Sdk/platform-tools:/var/lib/snapd/snap/bin:/home/akshat/.local/share/gem/ruby/3.0.0/bin"
 export PYTHONSTARTUP=~/.pyrc
 export BAT_PAGER="less -RF"
 
@@ -82,7 +82,7 @@ HIST_STAMPS="mm/dd/yyyy"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-export NVM_LAZY_LOAD=true
+#export NVM_LAZY_LOAD=true
 export NVM_COMPLETION=true
 plugins=(
     \sudo 
@@ -178,5 +178,9 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_SCREEN_SCALE_FACTORS=1
 export QT_SCALE_FACTOR=1
 
+export OSXCROSS_IOS=anything
+
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
