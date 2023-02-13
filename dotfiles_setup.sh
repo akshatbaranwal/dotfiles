@@ -23,13 +23,13 @@ if [[ $1 == "install" ]]; then
     echo dotfiles updated
 
     # automate dphone
-    echo setting autodphone rules
-    cp -n "/etc/udev/rules.d/dphone.rules" "${PWD}/.backup/dphone.rules" 2>/dev/null
-    sudo ln -nfs "${PWD}/dphone.rules" "/etc/udev/rules.d/dphone.rules"
-    chmod 644 /etc/udev/rules.d/dphone.rules
-    sudo udevadm control --reload-rules
-    sudo udevadm trigger
-    sudo systemctl restart udev.service
+    # echo setting autodphone rules
+    # cp -n "/etc/udev/rules.d/dphone.rules" "${PWD}/.backup/dphone.rules" 2>/dev/null
+    # sudo ln -nfs "${PWD}/dphone.rules" "/etc/udev/rules.d/dphone.rules"
+    # chmod 644 /etc/udev/rules.d/dphone.rules
+    # sudo udevadm control --reload-rules
+    # sudo udevadm trigger
+    # sudo systemctl restart udev.service
 
     # libinput gestures
     cp -n "${HOME}/.config/libinput-gestures.conf" "${PWD}/.backup/libinput-gestures.conf" 2>/dev/null

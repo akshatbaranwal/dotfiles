@@ -1,6 +1,7 @@
 [user]
 	name = AkshatBaranwal
 	email = akshatbaranwal07@gmail.com
+	signingkey = CC8A66E103BAAC71
 [core]
 	editor = vim
 	pager = diff-so-fancy | less --tabs=4 -RF
@@ -32,3 +33,7 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+[gpg]
+	program = gpg2
+[commit]
+	gpgsign = true

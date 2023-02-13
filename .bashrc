@@ -139,3 +139,6 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_SCREEN_SCALE_FACTORS=1
 export QT_SCALE_FACTOR=1
 unset SESSION_MANAGER
+export GPG_TTY=$(tty)
+
+export PATH="/home/akshat/.assemblyai-cli:$PATH"

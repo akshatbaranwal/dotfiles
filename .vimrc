@@ -28,7 +28,7 @@ Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'mcchrish/nnn.vim'
 call plug#end()
 
-let g:coc_node_path = '/home/akshat/.nvm/versions/node/v17.1.0/bin/node'
+let g:coc_node_path = '/home/akshat/.nvm/versions/node/v19.0.0/bin/node'
 
 " The following are commented out as they cause vim to behave a lot
 " differently from regular Vi. They are highly recommended though.
@@ -315,6 +315,17 @@ if has("autocmd")
   augroup END
 endif
 
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : "\<C-y>"
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+inoremap <silent><expr> <C-x><C-z> coc#pum#visible() ? coc#pum#stop() : "\<C-x>\<C-z>"
+" remap for complete to use tab and <cr>
+inoremap <silent><expr> <TAB>
+      \ coc#pum#visible() ? coc#pum#next(1):
+      \ <SID>check_back_space() ? "\<Tab>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+inoremap <silent><expr> <c-space> coc#refresh()
+
 let g:onedark_color_overrides = {
 \ "background": {"gui": "#0a0b0c", "cterm": "235", "cterm16": "0" },
 \ "white": {"gui": "#e1e4eb", "cterm": "235", "cterm16": "0" },
@@ -322,6 +333,8 @@ let g:onedark_color_overrides = {
 \ "comment_grey": { "gui": "#88909e", "cterm": "235", "cterm16": "0" },
 \ "blue": { "gui": "#75befa", "cterm": "235", "cterm16": "0" },
 \}
+
+" source ~/.cocrc
 
 syntax on
 colorscheme onedark

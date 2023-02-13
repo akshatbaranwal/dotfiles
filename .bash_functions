@@ -4,7 +4,8 @@
 display=":$(find /tmp/.X11-unix/* | sed 's#/tmp/.X11-unix/X##' | head -n 1)"
 user=$(who | grep '('"$display"')' | awk '{print $1}' | head -n 1)
 uid=$(id -u "$user")
-phoneMac="30:4b:07:69:63:12"
+phoneUsername="u0_a389"
+phoneMac="bc:61:93:c4:ea:d2"
 bluetoothMac="00:1B:66:C8:13:C3"
 # password of phone
 password=4739
@@ -23,38 +24,32 @@ kill_notify() {
 
 # change rubbish file names of tv series episodes to a more sensible format
 trimFilenames() {
-    if [ -z "$1" ]; then
-        files=$(ls -d -- * 2>/dev/null)
-    else
-        files=$(ls -d -- *."$1" 2>/dev/null)
+    if [ "$#" -eq 1 ]; then
+        2="$1"
+    elif [ "$#" -ne 2 ]; then
+        echo "Usage: trimFilenames [initial extension] [final extension]"
+        return
     fi
+    files=$(ls -d -- *"$1" 2>/dev/null)
     prefix=$(echo "$files" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D')
     suffix=$(echo "$files" | rev | sed -e 'N;s/^\(.*\).*\n\1.*$/\1\n\1/;D' | rev)
-    ext=$(echo "${files##*.}" | head -n1)
+    ext=${1#.}
+    newExt=${2#.}
     if [ "$(echo "$files" | wc -l)" -lt 2 ]; then
         echo Nothing to change
         return
     fi
-    echo Common Prefix: "$prefix"
-    echo Common Suffix: "${suffix%.*}"
+    echo Prefix: "$prefix"
+    echo Suffix: "${suffix%.$ext}"
+    echo Extension: "$ext"
     echo
-    if [[ "$prefix" = "$suffix" ]] || [[ $suffix != *.$ext ]] || [[ $prefix.$ext = "$suffix" ]] && [ -n "$1" ]; then
-        echo "No change done"
-        return
-    fi
     local IFS=$'\n'
     if [ "$ZSH_VERSION" ]; then
         setopt sh_word_split
     fi
-    if [ -z "$1" ]; then
-        for f in $files; do
-            mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix})))"
-        done
-    else
-        for f in $files; do
-            mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix}))).$ext"
-        done
-    fi
+    for f in $files; do
+        mv -iv -- "$f" "$(echo "$f" | cut -c $((${#prefix} + 1))-$((${#f} - ${#suffix}))).$newExt"
+    done
 }
 
 countdown() {
@@ -78,7 +73,7 @@ stopwatch() {
 # you'll need terminator and a profile named 'timer'
 timer() {
     Xaxis=$(xrandr --current | grep '\*' | uniq | awk '{print $1}' | cut -d 'x' -f1)
-    terminator --geometry=280x1+$((Xaxis / 2 - 140))+0 -p "timer" -x bash ~/.bash_functions countdown "$1" "$2" "$3" 2>/dev/null &
+    terminator --geometry=280x1+$((Xaxis / 2 - 140))+0 -p "timer" -x "bash ~/.bash_functions countdown $1 $2 $3" 2>/dev/null &
     disown
     exit
 }
@@ -302,8 +297,9 @@ sql() {
 
 # check if shutdown is scheduled
 schk() {
-    k="$(date --date=@$(($(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3) / 1000000)))"
-    if ! [ "$(echo "$k" | awk '{print $7}')" = "1970" ]; then
+    k="$(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager ScheduledShutdown | cut -d' ' -f3)"
+    if [[ "$k" != "18446744073709551615" ]]; then
+        k="$(date --date=@$(("$k" / 1000000)))"
         echo "$k"
         echo -n "Want to Cancel? [N/y] "
         read -r k
@@ -347,9 +343,9 @@ sphone() {
     if [ -z "$1" ]; then
         ipAddress="$(ip neigh | grep "$phoneMac" | cut -d' ' -f1 | head -n1)"
         ping -c1 "$ipAddress" >/dev/null 2>&1
-        ssh -xp 8022 u0_a210@"$ipAddress"
+        ssh -xp 8022 "$phoneUsername"@"$ipAddress"
     else
-        ssh -xp 8022 u0_a210@"$1"
+        ssh -xp 8022 "$phoneUsername"@"$1"
     fi
 }
 
@@ -359,9 +355,9 @@ mphone() {
         if [ -z "$1" ]; then
             ipAddress="$(ip neigh | grep "$phoneMac" | cut -d' ' -f1 | head -n1)"
             ping -c1 "$ipAddress" >/dev/null 2>&1
-            sudo sshfs -o allow_other u0_a210@"$ipAddress":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other "$phoneUsername"@"$ipAddress":/storage/emulated/0 /media/"$user"/Phone -p 8022
         else
-            sudo sshfs -o allow_other u0_a210@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
+            sudo sshfs -o allow_other "$phoneUsername"@"$1":/storage/emulated/0 /media/"$user"/Phone -p 8022
         fi
     fi
     if [ -z "$(ls /media/"$user"/Phone)" ]; then
@@ -413,7 +409,7 @@ dphone() {
     }
     displayPhone() {
         unlock
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" $1 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 218)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" $1 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 218 --window-title 'Poco X4 Pro')
         # if ! adb devices -l | grep "\busb\b" >/dev/null; then
         #     params+=(--max-fps 15 --bit-rate 2M)
         # fi
@@ -538,7 +534,7 @@ dphone_usb() {
     }
     displayPhone_usb() {
         # echo displayPhone_usb >>"/home/akshat/.dphone_debug"
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --stay-awake --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223 --window-title 'Poco X4 Pro')
         if pgrep -f vscode >/dev/null; then
             params+=(--always-on-top)
         fi
@@ -633,7 +629,7 @@ dphone_wifi() {
     }
     displayPhone_wifi() {
         # echo displayPhone_wifi >>"/home/akshat/.dphone_debug"
-        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M)
+        params=(--serial "$(adb devices | head -n2 | tail -n1 | awk '{print $1}')" --max-size 800 --turn-screen-off --lock-video-orientation=0 --window-x 1528 --window-y 223 --max-fps 15 --bit-rate 2M --window-title 'Poco X4 Pro')
         if pgrep -f vscode >/dev/null; then
             params+=(--always-on-top)
         fi
@@ -721,16 +717,13 @@ headphone() {
     index() {
         pacmd list-cards | grep -B1 bluez_card | grep index | awk '{print $2}'
     }
+    rfkill unblock bluetooth
+    sleep 1
     if pacmd list-cards | grep bluez_card >/dev/null; then
         pacmd set-card-profile "$(index)" "$(echo -e "a2dp_sink\nhandsfree_head_unit" | grep -v "$(pacmd list-cards | grep bluez_card -B1 -A30 | grep active | awk '{print $3}' | tr -d '<>')")"
     else
         bluetoothctl connect $bluetoothMac
     fi
-}
-
-# toggle audio output device
-switchAudio() {
-    pactl set-default-sink "$(pactl list short sinks | grep "alsa\|bluez" | grep -v "$(pactl info | grep 'Default Sink:' | cut -f3 -d' ')" | awk '{print $2}')"
 }
 
 # toggle noise torch
@@ -843,14 +836,14 @@ caffeine() {
 
 # download youtube music
 ym() {
-    builtin cd ${2:-~/Music} || return
-    youtube-dl -f bestaudio -x --audio-format mp3 --embed-thumbnail --add-metadata --xattrs --geo-bypass "$1"
+    yt-dlp -f 'ba' -x --audio-format mp3 --geo-bypass --embed-thumbnail --add-metadata --xattrs "$(xclip -o -sel clip)"  -o '%(title)s.%(ext)s'
+    # youtube-dl -f bestaudio -x --audio-format mp3 --embed-thumbnail --add-metadata --xattrs --geo-bypass "$(xclip -o -sel clip)"
 }
 
 # download youtube video
 yv() {
-    builtin cd ${2:-~/Videos} || return
-    youtube-dl -f best --embed-thumbnail --add-metadata --xattrs --geo-bypass --write-auto-sub --embed-sub --ignore-errors "$1"
+    yt-dlp -f 'bv' --recode-video mp4 --geo-bypass --embed-sub --embed-thumbnail --add-metadata --xattrs "$(xclip -o -sel clip)"  -o '%(title)s.%(ext)s'
+    # youtube-dl -f best --embed-thumbnail --add-metadata --xattrs --geo-bypass --write-auto-sub --embed-sub --ignore-errors "$(xclip -o -sel clip)"
 }
 
 timezsh() {
@@ -868,6 +861,7 @@ countLines() {
 }
 
 nf() {
+    return
     notify_send "$((($(date +%s) - $(date -d 20220624 +%s)) / 86400)) Day Streak!" "100 HOUR WORK WEEK"
     x=$(($(cat ~/.devOpsProgress)+1))
     echo $x > ~/.devOpsProgress
@@ -951,12 +945,103 @@ clipscreenshot() {
 }
 
 unlock_medium() {
-    twurl -u "baranwal_akshat" -A "Content-type: application/json" -X POST /1.1/direct_messages/events/new.json -d "{\"event\": {\"type\": \"message_create\", \"message_create\": {\"target\": {\"recipient_id\": \"741487052236021761\"}, \"message_data\": {\"text\": \"$(xclip -o -sel clip)\"}}}}" | jq '.event.message_create.message_data.text' | xargs firefox
+    twurl -u "baranwal_akshat" -A "Content-type: application/json" -X POST /1.1/direct_messages/events/new.json -d "{\"event\": {\"type\": \"message_create\", \"message_create\": {\"target\": {\"recipient_id\": \"741487052236021761\"}, \"message_data\": {\"text\": \"$(xclip -o -sel clip)\"}}}}" | jq '.event.message_create.message_data.text' | xargs \sudo -u "$user" DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/"$uid"/bus xdg-open
 }
 
 neigh() {
     sudo timeout 1s arping "$(ip neigh | awk '{print $1}' | grep -P "^\d{3}\.\d{3}\.\d{2,3}\.1$")" >/dev/null 2>&1
     ip neigh
 }
+
+iiit() {
+    return
+    \sudo -vS <<< 'shinchan' > /dev/null
+    if [ $(gsettings get org.gnome.system.proxy mode) = "'none'" ]; then
+        notify_send "PROXY: IIITA"
+        proxyman load iiit <<< 1 > /dev/null
+        firefox http://detectportal.firefox.com/canonical.html
+    else
+        notify_send "PROXY: NONE"
+        proxyman unset <<< 1 > /dev/null
+    fi
+
+    exit
+}
+
+# toggle audio output device
+switchAudio() {
+    all_outputs=($(pactl list short sinks | grep "alsa\|bluez" | awk '{print $2}'))
+    current_output=$(pactl info | grep 'Default Sink:' | awk '{print $3}')
+    arr_len="${#all_outputs[@]}"
+    line_number=$(echo "${all_outputs[@]}" | tr ' ' '\n' | grep -n $current_output | cut -f1 -d:)
+    line_number=$(((line_number-1+${1:-1}) % arr_len))
+    pactl set-default-sink "${all_outputs[@]:$line_number:1}"
+}
+
+stq() {
+    GTK_THEME=Adwaita:light /home/akshat/studio3t/Studio-3T &!
+    if ! ps aux | grep -v grep | grep "mongod --dbpath /home/akshat/Documents/MyCodes/mongodb/data/db" > /dev/null; then
+        sudo -S <<< 'shinchan' mongod --dbpath /home/akshat/Documents/MyCodes/mongodb/data/db
+    fi
+}
+
+unlockPhone() {
+    adb -d shell input keyevent 26 && adb -d shell input keyevent 82 && adb -d shell input text 4739 && adb -d shell input keyevent 66
+}
+
+dodgeDamagedDisplay() {
+    if [ "$(xdpyinfo | grep dimensions | awk '{print $2}')" = "1920x1080" ]; then
+        # change these 4 variables accordingly
+        ORIG_X=1920
+        ORIG_Y=1080
+        NEW_X=1120
+        NEW_Y=1080
+        ###
+        #Modify to multiple of 8. Issues with window sizing etc without these next two lines.
+        NEW_X=$(($NEW_X/8*8))
+        NEW_Y=$(($NEW_Y/8*8))
+        X_DIFF=$(($NEW_X - $ORIG_X))
+        Y_DIFF=$(($NEW_Y - $ORIG_Y))
+        # Uncomment the next line to use left portion of screen:
+        X_DIFF=0
+        # Uncomment the next line to use upper portion of screen:
+        #Y_DIFF=0
+        
+        ORIG_RES="$ORIG_X"x"$ORIG_Y"
+        ACTIVEOUTPUT=$(xrandr | grep -e " connected [^(]" | sed -e "s/\([A-Za-z0-9]\+\) connected.*/\1/")
+        MODELINE=$(cvt $NEW_X $NEW_Y | grep Modeline | cut -d' ' -f3-)
+        NEW_RES=$(cvt $NEW_X $NEW_Y | grep Modeline | cut -d' ' -f2 | tr -d \")
+        
+        xrandr --newmode $NEW_RES $MODELINE
+        xrandr --addmode $ACTIVEOUTPUT $NEW_RES
+        xrandr --output $ACTIVEOUTPUT --fb $NEW_RES --panning $NEW_RES --mode $NEW_RES
+        xrandr --fb $NEW_RES --output $ACTIVEOUTPUT --mode $ORIG_RES --transform 1,0,$X_DIFF,0,1,$Y_DIFF,0,0,1
+    else
+        xrandr --output eDP-1 --transform 1,0,0,0,1,0,0,0,1 --mode "1920x1080"
+    fi
+}
+
+which() {
+    builtin which "$@" | bat -ppl zsh
+}
+
+stimulerLinks() {
+    /usr/sbin/firefox file:///media/akshat/Data/Documents/Stimuler/Notes/links.md
+    sleep 0.7
+    xdotool key ctrl+r
+}
+
+stimulerRemoveVmAccess() {
+    gcloud compute instances remove-iam-policy-binding deeplearning-1-vm --zone=us-central1-c --member=user:$1 --role=roles/compute.osAdminLogin >/dev/null &
+    gcloud iam service-accounts remove-iam-policy-binding 743596065368-compute@developer.gserviceaccount.com --member=user:$1 --role=roles/iam.serviceAccountUser >/dev/null &
+    gcloud projects remove-iam-policy-binding stimuler-53977 --member=user:$1 --role=roles/compute.viewer > /dev/null &
+}
+
+stimulerAddVmAccess() {
+    gcloud compute instances add-iam-policy-binding deeplearning-1-vm --zone=us-central1-c --member=user:$1 --role=roles/compute.osAdminLogin >/dev/null &
+    gcloud iam service-accounts add-iam-policy-binding 743596065368-compute@developer.gserviceaccount.com --member=user:$1 --role=roles/iam.serviceAccountUser >/dev/null &
+    gcloud projects add-iam-policy-binding stimuler-53977 --member=user:$1 --role=roles/compute.viewer >/dev/null &
+}
+
 
 "$@"
