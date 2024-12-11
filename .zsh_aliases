@@ -1,0 +1,27 @@
+alias doc='cd /Users/akshat/Documents'
+alias pubip="curl icanhazip.com 2>/dev/null | tr -d '\n' | tee >(pbcopy) && echo"
+alias myip1="ip address | grep 192 | head -n1 | awk '{print \$2}' | cut -f1 -d/"
+alias myip="ip address | grep 192 | head -n1 | awk '{print \$2}' | cut -f1 -d/ | tr -d '\n' | tee >(pbcopy) && echo"
+alias zshfunctions='vim ~/.zsh_functions; exec zsh'
+alias res='cd /Users/akshat/Documents/Resources'
+alias dow='cd /Users/akshat/Downloads'
+alias flutter='fvm flutter'
+alias dart='fvm dart'
+alias aliases='vim ~/.zsh_aliases; exec zsh'
+alias brew='env PATH="${PATH//$(pyenv root)\/shims:/}" brew'
+alias zshrc='vim ~/.zshrc; exec zsh'
+alias ..='cd ..'
+alias la='ls -ad .*'
+alias cat='bat -pp'
+alias vs='cursor . && sleep 1 && exit'
+alias bk='cd /Users/akshat/Documents/MyCodes/Stimuler/backend'
+alias unlock_akarshi='adb -s RFCX208QN3J shell input text 11082001'
+alias lr='ls -hartl'
+alias du="ncdu --color dark -rr -x --exclude .git --exclude node_modules"
+alias sl='cd /Users/akshat/Documents/MyCodes/Stimuler'
+alias fl='cd /Users/akshat/Documents/MyCodes/Stimuler/flutter-app'
+alias py='python3'
+alias gci='gcloud compute instances'
+alias gstart='gcloud compute instances start'
+alias gstop='gcloud compute instances stop --async'
+alias sahej_unlock='adb -s "24081FDF60023L" shell input keyevent 26 && sleep 0.5 && adb -s "24081FDF60023L" shell input touchscreen swipe 500 1000 500 0 100 && sleep 0.5 && adb -s "24081FDF60023L" shell input text 5412 && adb -s "24081FDF60023L" shell input keyevent 66'

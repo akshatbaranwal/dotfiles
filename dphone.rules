@@ -1,2 +1,0 @@
-ACTION=="add", KERNELS=="usb1", SUBSYSTEM=="usb", DRIVER=="usb", RUN+="/home/akshat/.bash_functions autodphone usb"
-ACTION=="remove", KERNELS=="usb1", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/home/akshat/.bash_functions autodphone wifi"

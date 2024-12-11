@@ -1,6 +1,3 @@
-DISABLE_MAGIC_FUNCTIONS="true"
-zmodload zsh/zprof
-
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -8,13 +5,11 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-export PATH="$HOME/.local/bin:/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/snap/bin:$HOME/snap/flutter/common/flutter/bin:$HOME/Android/Sdk/cmdline-tools/latest/bin:$HOME/Android/Sdk/emulator:/home/akshat/Android/Sdk/platform-tools:/var/lib/snapd/snap/bin:/home/akshat/.local/share/gem/ruby/3.0.0/bin"
-export PYTHONSTARTUP=~/.pyrc
-export BAT_PAGER="less -RF"
-export EDITOR="vim"
+# If you come from bash you might have to change your $PATH.
+# export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="/home/akshat/.oh-my-zsh"
+export ZSH="$HOME/.oh-my-zsh"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -35,17 +30,16 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Case-sensitive completion must be off. _ and - will be interchangeable.
 # HYPHEN_INSENSITIVE="true"
 
-# Uncomment the following line to disable bi-weekly auto-update checks.
-# DISABLE_AUTO_UPDATE="true"
-
-# Uncomment the following line to automatically update without prompting.
-# DISABLE_UPDATE_PROMPT="true"
+# Uncomment one of the following lines to change the auto-update behavior
+zstyle ':omz:update' mode disabled  # disable automatic updates
+# zstyle ':omz:update' mode auto      # update automatically without asking
+# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
 
 # Uncomment the following line to change how often to auto-update (in days).
-# export UPDATE_ZSH_DAYS=13
+# zstyle ':omz:update' frequency 13
 
 # Uncomment the following line if pasting URLs and other text is messed up.
-# DISABLE_MAGIC_FUNCTIONS="true"
+DISABLE_MAGIC_FUNCTIONS="true"
 
 # Uncomment the following line to disable colors in ls.
 # DISABLE_LS_COLORS="true"
@@ -57,8 +51,9 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # ENABLE_CORRECTION="true"
 
 # Uncomment the following line to display red dots whilst waiting for completion.
-# Caution: this setting can cause issues with multiline prompts (zsh 5.7.1 and newer seem to work)
-# See https://github.com/ohmyzsh/ohmyzsh/issues/5765
+# You can also set it to another string to have that shown instead of the default red dots.
+# e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+# Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
 # COMPLETION_WAITING_DOTS="true"
 
 # Uncomment the following line if you want to disable marking untracked files
@@ -72,7 +67,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
 # or set a custom format using the strftime function format specifications,
 # see 'man strftime' for details.
-HIST_STAMPS="mm/dd/yyyy"
+# HIST_STAMPS="mm/dd/yyyy"
 
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
@@ -82,29 +77,42 @@ HIST_STAMPS="mm/dd/yyyy"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-
-#export NVM_LAZY_LOAD=true
-export NVM_COMPLETION=true
 plugins=(
-    \sudo 
-    zsh-nvm
-    fd
-    extract
-    ripgrep
-    zsh-interactive-cd
-    zsh-autosuggestions
-    zsh-syntax-highlighting
-    history-substring-search
-    colored-man-pages
-    copypath
-    flutter
-    catimg
-    jsontools
-    # per-directory-history
-    rsync
+	\sudo
+	# fd
+	extract
+	# ripgrep
+	zsh-interactive-cd
+	zsh-autosuggestions
+	zsh-syntax-highlighting
+	history-substring-search
+	colored-man-pages
+	poetry
+	git
+	node
+	docker
+	docker-compose
+	# docker-machine
+	# adb
+	chruby
+	colorize
+	flutter
+	gcloud
+	git-lfs
+	kubectl
+	nvm
+	npm
+	poetry
+	python
+	rsync
+	zsh-navigation-tools
 )
 
+# Skip all plugin aliases
+zstyle ':omz:plugins:*' aliases no
+
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
+fpath+="$(brew --prefix)/share/zsh/site-functions"
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
@@ -133,70 +141,77 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
+if [ -f ~/.zsh_aliases ]; then
+    . ~/.zsh_aliases
 fi
 
-if [ -f ~/.bash_functions ]; then
-    . ~/.bash_functions
+if [ -f ~/.zsh_functions ]; then
+    . ~/.zsh_functions
 fi
-
-# export NVM_DIR="$HOME/.nvm"
-# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# place this after nvm initialization!
-# autoload -U add-zsh-hook
-# load-nvmrc() {
-#   local node_version="$(nvm version)"
-#   local nvmrc_path="$(nvm_find_nvmrc)"
-# 
-#   if [ -n "$nvmrc_path" ]; then
-#     local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
-# 
-#     if [ "$nvmrc_node_version" = "N/A" ]; then
-#       nvm install
-#     elif [ "$nvmrc_node_version" != "$node_version" ]; then
-#       nvm use
-#     fi
-#   elif [ "$node_version" != "$(nvm version default)" ]; then
-#     echo "Reverting to nvm default version"
-#     nvm use default
-#   fi
-# }
-# add-zsh-hook chpwd load-nvmrc
-# load-nvmrc
-
-# pip zsh completion start
-function _pip_completion {
-  local words cword
-  read -Ac words
-  read -cn cword
-  reply=( $( COMP_WORDS="$words[*]" \
-             COMP_CWORD=$(( cword-1 )) \
-             PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null ))
-}
-
-compctl -K _pip_completion pip3
-# pip zsh completion end
-
-export FZF_DEFAULT_OPTS="--bind='ctrl-o:execute(code {})+abort'"
-
-export QT_DEVICE_PIXEL_RATIO=0
-export QT_AUTO_SCREEN_SCALE_FACTOR=1
-export QT_SCREEN_SCALE_FACTORS=1
-export QT_SCALE_FACTOR=1
-
-export OSXCROSS_IOS=anything
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# export JAVA_HOME="/opt/android-studio/jbr"
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$HOME/.pub-cache/bin:$HOME/.assemblyai-cli:$HOME/.local/share/pnpm:$PATH"
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/akshat/google-cloud-sdk/path.zsh.inc' ]; then . '/home/akshat/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/Users/akshat/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/akshat/Downloads/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/home/akshat/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/akshat/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/Users/akshat/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/akshat/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
+
+export PATH="/Users/akshat/fvm/default/bin:/Users/akshat/Library/Android/sdk/cmdline-tools/latest/bin:/Users/akshat/.local/bin:/Users/akshat/Library/Android/sdk/platform-tools:/Users/akshat/Library/Android/sdk/tools:$PATH"
+
+alias manpath=false
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+source /opt/homebrew/opt/chruby/share/chruby/chruby.sh
+source /opt/homebrew/opt/chruby/share/chruby/auto.sh
+chruby ruby-3.2.2
+
+HISTSIZE=999999999
+SAVEHIST=$HISTSIZE
+
+setopt INC_APPEND_HISTORY        # Write to the history file immediately, not when the shell exits.
+setopt SHARE_HISTORY             # Share history between all sessions.
+setopt HIST_IGNORE_DUPS          # Don't record an entry that was just recorded again.
+
+complete -C '/usr/local/bin/aws_completer' aws
+
+## [Completion]
+## Completion scripts setup. Remove the following line to uninstall
+# [[ -f /Users/akshat/.dart-cli-completion/zsh-config.zsh ]] && . /Users/akshat/.dart-cli-completion/zsh-config.zsh || true
+## [/Completion]
+
+# export PATH="$HOME/.pub-cache/bin:$PATH"
+
+# export LC_ALL=en_US.UTF-8
+# export LANG=en_US.UTF-8
+
+# eval "$(conda "shell.$(basename "${SHELL}")" hook)"
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+export PATH="$PATH:/Applications/010 Editor.app/Contents/CmdLine" #ADDED BY 010 EDITOR
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+# __conda_setup="$('/opt/homebrew/Caskroom/miniconda/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+# if [ $? -eq 0 ]; then
+#     eval "$__conda_setup"
+# else
+#     if [ -f "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh" ]; then
+#         . "/opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh"
+#     else
+#         export PATH="/opt/homebrew/Caskroom/miniconda/base/bin:$PATH"
+#     fi
+# fi
+# unset __conda_setup
+# <<< conda initialize <<<
+

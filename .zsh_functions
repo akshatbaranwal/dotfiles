@@ -1,0 +1,422 @@
+cd() {
+    if builtin cd "$@"; then
+        clear -x
+        ls
+    fi
+}
+
+gc() {
+    # Get the URL from clipboard
+    local url=$(pbpaste)
+    
+    # Remove trailing slashes and .git suffix if present
+    url=$(echo "$url" | sed 's#/*$##; s/\.git$//')
+    
+    # Extract repo name
+    local repo_name=$(basename "$url")
+    
+    # Convert URL to SSH format if it's HTTPS
+    if [[ "$url" == https://* ]]; then
+        url=$(echo "$url" | sed 's#^https://##; s#/#:#; s#^#git@#')
+    fi
+    
+    # Add .git suffix
+    url="${url}.git"
+    
+    # Create directory structure and clone
+    mkdir -p "$repo_name/main"
+    cd "$repo_name"
+    git clone "$url" main
+    
+    # Check if clone was successful
+    if [ $? -eq 0 ]; then
+        echo "Repository cloned successfully into $repo_name/main"
+    else
+        echo "Failed to clone repository. Please check the URL and your permissions."
+        cd ..
+        rm -rf "$repo_name"
+    fi
+
+    cd main
+}
+
+mkd() {
+	mkdir -p "$@" && cd "$_";
+}
+
+which() {
+    builtin which "$@" | bat -ppl zsh
+}
+
+where () {
+    builtin where "$@" | bat -ppl zsh
+}
+
+akp() {
+	akp_ip=''
+	if [[ $(ip address | grep 192 | head -n1 | awk '{print $2}' | cut -f3 -d.) == 1 ]]; then
+		akp_ip='192.168.1.11'
+	else	
+		akp_ip='192.168.0.118'
+	fi
+	ssh akp@$akp_ip "osascript -e 'display notification \"$@\" with title \"HEADS UP!\"'"
+	# ssh akp@$akp_ip "gsettings set org.gnome.desktop.notifications show-banners true; DISPLAY=:0 notify-send 'HEADS UP!' \"$@\""
+}
+
+fs() {
+	if ncdu --color dark -rr -x --exclude .git --exclude node_modules -b /dev/null > /dev/null 2>&1
+	then
+		local arg=-sbh 
+	else
+		local arg=-sh 
+	fi
+	if [[ -n "$@" ]]
+	then
+		\du $arg -- "$@"
+	else
+		\du $arg .[^.]* ./*
+	fi
+}
+
+openvlc() {
+    ls | sort -n | grep -E "\.(mp3|mp4|mkv|avi)$" | tail -n+"${1:-0}" | tr '\n' '\0' | xargs -0 vlc 1>/dev/null 2>&1 &
+    disown
+}
+
+cd() {
+    if builtin cd "$@"; then
+        clear -x
+        ls -Grt
+    fi
+}
+
+ym() {
+    yt-dlp -f 'ba' -x --audio-format mp3 --geo-bypass --embed-thumbnail --add-metadata --xattrs "$(pbpaste)"  -o '%(title)s.%(ext)s'
+}
+
+yv() {
+    yt-dlp -f 'bv*+ba' --merge-output-format mp4 --geo-bypass --embed-sub --embed-thumbnail --add-metadata --xattrs "$(pbpaste | tr -d '\n')" -o '%(title)s.%(ext)s'
+}
+
+files() {
+    find . -type f | sed -En 's|.*/[^/]+\.([^/.]+)$|\1|p' | sort | uniq -c | sort -nr
+
+	echo
+	
+	total_minutes=$(find . -maxdepth ${1:-3} -type f | parallel -j+0 --no-notice "ffprobe -v quiet -of csv=p=0 -show_entries format=duration {} 2>/dev/null" | awk '{s+=$1} END {print int(s/60)}')
+
+    hours=$((total_minutes / 60))
+    minutes=$((total_minutes % 60))
+    
+    if [[ $hours -gt 0 ]]; then
+        echo "$hours hours $minutes minutes"
+    else
+        echo "$minutes minutes"
+    fi
+}
+
+countLines() {
+    find . -name "*.$1" | sed 's/.*/"&"/' | xargs  wc -l | sort -n
+}
+
+trimFilenames() {
+    # Collect filenames (arguments or all files in the current directory)
+    if [ $# -eq 0 ]; then
+      files=(*)
+    else
+      files=("$@")
+    fi
+    
+    # Exit if no files are found
+    if [ ${#files[@]} -eq 0 ]; then
+      echo "No files to process."
+      exit 1
+    fi
+    
+    # Initialize arrays
+    base_names=()
+    extensions=()
+    
+    # Extract basenames and extensions
+    for f in "${files[@]}"; do
+      base_names+=("${f%.*}")
+      extensions+=(".${f##*.}")
+    done
+    
+    # Find common prefix
+    prefix="${base_names[1]}"
+    for name in "${base_names[@]}"; do
+      while [[ "$name" != "$prefix"* ]]; do
+        prefix="${prefix%?}"
+        [[ -z "$prefix" ]] && break
+      done
+    done
+    
+    # Find common suffix
+    suffix="${base_names[1]}"
+    for name in "${base_names[@]}"; do
+      while [[ "$name" != *"$suffix" ]]; do
+        suffix="${suffix#?}"
+        [[ -z "$suffix" ]] && break
+      done
+    done
+    
+    # Rename files
+    for i in {1..${#files[@]}}; do
+      original="${files[i]}"
+      base="${base_names[i]}"
+      ext="${extensions[i]}"
+    
+      # Remove common prefix and suffix
+      new_base="${base#"$prefix"}"
+      new_base="${new_base%"$suffix"}"
+      new_name="${new_base}${ext}"
+    
+      # Rename the file if the new name is different
+      if [[ "$original" != "$new_name" ]]; then
+        mv -- "$original" "$new_name"
+        echo "Renamed '$original' to '$new_name'"
+      fi
+    done
+}
+
+gd() {
+    git diff HEAD~$1 HEAD~$2 ${@:3}
+}
+
+ec2ls() {
+    # Get all AWS regions
+    regions=$(aws ec2 describe-regions --output json | jq -r '.Regions[].RegionName')
+
+    # Check if regions were successfully retrieved
+    if [ -z "$regions" ]; then
+        echo "Error: Failed to retrieve AWS regions. Please check your AWS CLI configuration."
+        exit 1
+    fi
+
+    # Process all regions in parallel
+    echo "$regions" | parallel --will-cite -j 0 '
+        region={}
+        instance_count=$(aws ec2 describe-instances --region "$region" --query "length(Reservations[].Instances[])" --output text)
+        
+        if [ "$instance_count" -gt 0 ]; then
+            echo "Region: $region"
+            aws ec2 describe-instances --region "$region" --query "Reservations[].Instances[].[InstanceId,join(\`,\`,Tags[?Key==\`Name\`].Value),State.Name,PublicIpAddress,PrivateIpAddress]" --output table --no-cli-pager --color off
+            echo ""
+        fi
+    '
+}
+
+ec2start() {
+    if [ $# -ne 2 ]; then
+        echo "Usage: ec2start <instance-name> <region>"
+        return 1
+    fi
+
+    local instance_name=$1
+    local region=$2
+
+    echo "Checking region: $region"
+
+    local instance_ids=$(aws ec2 describe-instances \
+        --region "$region" \
+        --filters "Name=tag:Name,Values=$instance_name" \
+        --query "Reservations[].Instances[].InstanceId" \
+        --output text \
+        --no-cli-pager)
+
+    if [ -n "$instance_ids" ]; then
+        echo "Starting $instance_name in $region: $instance_ids"
+        aws ec2 start-instances \
+            --region "$region" \
+            --instance-ids $instance_ids \
+            --no-cli-pager
+    else
+        echo "No matching instances found in $region"
+    fi
+}
+
+ec2stop() {
+    if [ $# -ne 2 ]; then
+        echo "Usage: ec2stop <instance-name> <region>"
+        return 1
+    fi
+
+    local instance_name=$1
+    local region=$2
+
+    echo "Checking region: $region"
+
+    local instance_ids=$(aws ec2 describe-instances \
+        --region "$region" \
+        --filters "Name=tag:Name,Values=$instance_name" \
+        --query "Reservations[].Instances[].InstanceId" \
+        --output text \
+        --no-cli-pager)
+
+    if [ -n "$instance_ids" ]; then
+        echo "Stopping $instance_name in $region: $instance_ids"
+        aws ec2 stop-instances \
+            --region "$region" \
+            --instance-ids $instance_ids \
+            --no-cli-pager
+    else
+        echo "No matching instances found in $region"
+    fi
+}
+
+ec2reboot() {
+    if [ $# -ne 2 ]; then
+        echo "Usage: ec2reboot <instance-name> <region>"
+        return 1
+    fi
+
+    local instance_name=$1
+    local region=$2
+
+    echo "Checking region: $region"
+
+    local instance_ids=$(aws ec2 describe-instances \
+        --region "$region" \
+        --filters "Name=tag:Name,Values=$instance_name" \
+        --query "Reservations[].Instances[].InstanceId" \
+        --output text \
+        --no-cli-pager)
+
+    if [ -n "$instance_ids" ]; then
+        echo "Rebooting $instance_name in $region: $instance_ids"
+        aws ec2 reboot-instances \
+            --region "$region" \
+            --instance-ids $instance_ids \
+            --no-cli-pager
+    else
+        echo "No matching instances found in $region"
+    fi
+}
+
+gwa() {
+    git worktree add ../$1
+    builtin cd ../$1
+    git branch -u origin/$1 $1
+    git fetch origin
+    git reset --hard origin/$1
+    cd .
+    echo "Added worktree for branch $1"
+}
+
+gwd() {
+    local branch_name=$(basename $(pwd))
+    git add .
+    git reset --hard
+    builtin cd ../main
+    git worktree remove ../$branch_name
+    echo "Removed worktree for branch $branch_name"
+}
+
+export JOURNAL_DIR="/Users/akshat/Documents/MyCodes/Stimuler/notion/journal"
+
+jl() {
+    if [[ ! -d "$JOURNAL_DIR" ]]; then
+        mkdir -p "$JOURNAL_DIR"
+    fi
+    
+    local days_offset=${1:-0}  # Default to 0 if no parameter provided
+    local target_date
+    
+    # On macOS, use -v flag for date adjustment
+    if [[ $days_offset -ge 0 ]]; then
+        target_date=$(date -v "+${days_offset}d" +%d_%m_%Y)
+    else
+        # Remove the minus sign for -v flag
+        local abs_offset=${days_offset#-}
+        target_date=$(date -v "-${abs_offset}d" +%d_%m_%Y)
+    fi
+    
+    local FILENAME="${target_date}.txt"
+    local FILEPATH="$JOURNAL_DIR/$FILENAME"
+    
+    if [[ ! -f "$FILEPATH" ]]; then
+        touch "$FILEPATH"
+    fi
+    
+    vim +star "$FILEPATH"
+}
+
+jlg() {
+    export GREP_COLOR='1;31'
+    
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: jlg [START_DATE] [END_DATE] 'search_term'"
+        echo "Date format: DD_MM_YYYY"
+        echo "Examples:"
+        echo "  jlg 'search_term'           # Search in all files"
+        echo "  jlg 01_01_2024 'search_term'    # Search from date till today"
+        echo "  jlg 01_01_2024 31_03_2024 'search_term'  # Search in date range"
+        return 1
+    fi
+
+    local TODAY=$(date +%Y%m%d)
+    local START_DATE="00000000"
+    local END_DATE=$TODAY
+    local SEARCH_TERM=""
+
+    # Parse arguments based on count
+    case $# in
+        1)  # Only search term provided
+            SEARCH_TERM=$1
+            ;;
+        2)  # Start date and search term
+            # Convert DD_MM_YYYY to YYYYMMDD
+            START_DATE=$(echo $1 | awk -F_ '{print $3$2$1}')
+            SEARCH_TERM=$2
+            ;;
+        *)  # Both dates and search term
+            # Convert DD_MM_YYYY to YYYYMMDD for both dates
+            START_DATE=$(echo $1 | awk -F_ '{print $3$2$1}')
+            END_DATE=$(echo $2 | awk -F_ '{print $3$2$1}')
+            SEARCH_TERM=$3
+            ;;
+    esac
+
+    find "$JOURNAL_DIR" -type f -name "*.txt" | while read -r file
+    do
+        # Convert filename date from DD_MM_YYYY to YYYYMMDD
+        local FILE_DATE=$(basename "$file" .txt | awk -F_ '{print $3$2$1}')
+        if [[ $FILE_DATE -ge $START_DATE && $FILE_DATE -le $END_DATE ]]
+        then
+            if grep -iq "$SEARCH_TERM" "$file"
+            then
+                grep -i "$SEARCH_TERM" "$file" | sed "s|^|$(basename "$file" .txt) : |"
+            fi
+        fi
+    done
+}
+
+jls() {
+    local NUM_ENTRIES=${1:-5}  # Default to 5 if no number provided
+    
+    # Find all non-empty txt files, convert filenames to YYYYMMDD format for sorting
+    find "$JOURNAL_DIR" -type f -name "*.txt" -not -empty | while read -r file; do
+        echo "$(basename "$file" .txt | awk -F_ '{print $3$2$1}') $file"
+    done | sort -n | tail -n $NUM_ENTRIES | while read -r date_file; do
+        # Extract the filename from the sorted output
+        local file=$(echo $date_file | cut -d' ' -f2)
+        local filename=$(basename "$file" .txt)
+        
+        # Convert DD_MM_YYYY to a date format that 'date' command can parse
+        local formatted_date=$(echo $filename | awk -F_ '{
+            print $3"-"$2"-"$1
+        }')
+        
+        # Use date command to get day name and month name
+        local pretty_date=$(date -j -f "%Y-%m-%d" "$formatted_date" "+(%a %d %b '%y)")
+        
+        # Print original filename and formatted date
+	echo -e "\033[32m$filename $pretty_date\033[0m"
+        # Print the content
+        cat "$file"
+        # Print a newline for separation
+        echo ""
+    done
+}
+
