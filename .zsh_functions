@@ -420,3 +420,48 @@ jls() {
     done
 }
 
+jlg () {
+    export GREP_COLOR='1;31'
+    if [[ $# -eq 0 ]]
+    then
+        echo "Usage: jlg [START_DATE] [END_DATE] 'search_term'"
+        echo "Date format: DD_MM_YYYY"
+        echo "Examples:"
+        echo "  jlg 'search_term'           # Search in all files"
+        echo "  jlg 01_01_2024 'search_term'    # Search from date till today"
+        echo "  jlg 01_01_2024 31_03_2024 'search_term'  # Search in date range"
+        return 1
+    fi
+
+    local TODAY=$(date +%Y%m%d)
+    local START_DATE=00000000
+    local END_DATE=$TODAY
+    local SEARCH_TERM=""
+
+    case $# in
+        1) SEARCH_TERM="$1" ;;
+        2) START_DATE=$(echo "$1" | awk -F_ '{print $3$2$1}')
+           SEARCH_TERM="$2" ;;
+        *) START_DATE=$(echo "$1" | awk -F_ '{print $3$2$1}')
+           END_DATE=$(echo "$2" | awk -F_ '{print $3$2$1}')
+           SEARCH_TERM="$3" ;;
+    esac
+
+    find "$JOURNAL_DIR" -type f -name "*.txt" | while read -r file
+    do
+        # Extract just the filename without path and extension
+        local filename=$(basename "$file" .txt)
+        # Extract the date part and convert it
+        local FILE_DATE=$(echo "$filename" | grep -o '[0-9]\{2\}_[0-9]\{2\}_[0-9]\{4\}' | awk -F_ '{print $3$2$1}')
+
+        # Only proceed if we got a valid date
+        if [ ! -z "$FILE_DATE" ] && [ "$FILE_DATE" -ge "$START_DATE" ] && [ "$FILE_DATE" -le "$END_DATE" ]
+        then
+            if grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox} -iq "$SEARCH_TERM" "$file"
+            then
+                grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox} -i "$SEARCH_TERM" "$file" | sed "s|^|$filename : |"
+            fi
+        fi
+    done
+}
+
