@@ -198,8 +198,6 @@ complete -C '/usr/local/bin/aws_completer' aws
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-export PATH="$PATH:/Applications/010 Editor.app/Contents/CmdLine" #ADDED BY 010 EDITOR
-
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 # __conda_setup="$('/opt/homebrew/Caskroom/miniconda/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
@@ -214,4 +212,6 @@ export PATH="$PATH:/Applications/010 Editor.app/Contents/CmdLine" #ADDED BY 010 
 # fi
 # unset __conda_setup
 # <<< conda initialize <<<
+
+export PATH="$HOME/.cargo/bin:$PATH"
 
